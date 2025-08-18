@@ -5,7 +5,9 @@ import os
 import argparse
 import cv2
 import json
+import tempfile
 from datetime import datetime
+
 
 def get_video_files(dir):
     video_extensions = ('.mp4', '.mkv', '.mov')
@@ -19,6 +21,7 @@ def get_video_files(dir):
 
             video_files.append(os.path.join(root, file))
     return video_files
+
 
 def find_reference_file(distorted_file, reference_files):
     target_name = os.path.splitext(os.path.basename(distorted_file))[0]
@@ -40,8 +43,8 @@ def find_reference_file(distorted_file, reference_files):
     
     return best_match
 
+
 def get_video_info(video_path):
-    """Get video information using ffprobe and OpenCV"""
     cmd = [
         'ffprobe',
         '-v', 'quiet',
@@ -88,11 +91,13 @@ def get_video_info(video_path):
         print(f"Error parsing ffprobe output for {video_path}: {e}")
         return None
 
+
 def get_frame_count_cv2(video_path):
     cap = cv2.VideoCapture(video_path)
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     return frame_count
+
 
 def format_duration(seconds):
     if seconds < 60:
@@ -107,6 +112,7 @@ def format_duration(seconds):
         secs = seconds % 60
         return f"{hours}h {minutes}m {secs:.1f}s"
 
+
 def format_file_size(size_bytes):
     if size_bytes == 0:
         return "Unknown"
@@ -116,6 +122,7 @@ def format_file_size(size_bytes):
             return f"{size_bytes:.1f} {unit}"
         size_bytes /= 1024.0
     return f"{size_bytes:.1f} TB"
+
 
 def compare_video_properties(reference, distorted):
     print("Checking video properties...")
@@ -175,13 +182,15 @@ def compare_video_properties(reference, distorted):
         
     return True
 
-def get_lavfi(mode, output_file='-'):
+
+def get_lavfi(mode, output_file):
     mode = mode.lower()
+    lavfi = ''
     if 'vmaf' in mode:
         if '4k' in mode :
             model_name, model_neg_name = "vmaf_4k_v0.6.1", "vmaf_4k_v0.6.1neg"
         else:
-            model_name_model_neg_mae =  "vmaf_v0.6.1", "vmaf_v0.6.1neg"
+            model_name, model_neg_name =  "vmaf_v0.6.1", "vmaf_v0.6.1neg"
 
         if 'full' in mode:
             lavfi = f"libvmaf='model=version={model_name}\\:name=vmaf|version={model_neg_name}\\:name=vmaf_neg:feature=name=psnr|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
@@ -189,7 +198,7 @@ def get_lavfi(mode, output_file='-'):
             lavfi = f"libvmaf='model=version={model_name}\\:name=vmaf:feature=name=psnr|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
 
     elif 'psnr' in mode:
-        lavfi = f"psnr=stats_file{output_file}"
+        lavfi = f"psnr='stats_file={output_file}'"
 
     return lavfi
 
@@ -217,21 +226,79 @@ def parse_vmaf_results(output_file):
         print(f"Error parsing VMAF results: {e}")
         return None
 
+def parse_psnr_results(output_file):
+    try:
+        with open(output_file, 'r') as f:
+            lines = f.readlines()
+        
+        mse_avg_values = []
+        mse_y_values = []
+        mse_u_values = []
+        mse_v_values = []
+        psnr_avg_values = []
+        psnr_y_values = []
+        psnr_u_values = []
+        psnr_v_values = []
+        
+        for line in lines:
+            if line.startswith('n:'):
+                # Parse key:value pairs
+                parts = line.strip().split()
+                frame_data = {}
+                for part in parts:
+                    if ':' in part:
+                        key, value = part.split(':', 1)
+                        frame_data[key] = float(value)
+                
+                mse_avg_values.append(frame_data['mse_avg'])
+                mse_y_values.append(frame_data['mse_y'])
+                mse_u_values.append(frame_data['mse_u'])
+                mse_v_values.append(frame_data['mse_v'])
+                psnr_avg_values.append(frame_data['psnr_avg'])
+                psnr_y_values.append(frame_data['psnr_y'])
+                psnr_u_values.append(frame_data['psnr_u'])
+                psnr_v_values.append(frame_data['psnr_v'])
+        
+        return {
+            'psnr_y': sum(psnr_y_values) / len(psnr_y_values),
+            'psnr_u': sum(psnr_u_values) / len(psnr_u_values),
+            'psnr_v': sum(psnr_v_values) / len(psnr_v_values),
+            'psnr_avg': sum(psnr_avg_values) / len(psnr_avg_values),
+            'mse_avg': sum(mse_avg_values) / len(mse_avg_values)
+        }
+        
+    except Exception as e:
+        print(f"Error parsing PSNR results: {e}")
+        return None
+
+
 def run_vmaf_analysis(reference, distorted, mode, check=False, output=False):
 
-    output_file = f"{distorted[:-4]}.vmaf.json"
-    if os.path.exists(output_file) and not __name__ == "__main__":
-        print(f"{output_file} exists already - SKIPPING!")
-        return
+    if output:
+        if 'psnr' in mode:
+            output_file = f"{distorted[:-4]}.psnr.txt"
+        else:
+            output_file = f"{distorted[:-4]}.vmaf.json"
+        
+        if os.path.exists(output_file) and not __name__ == "__main__":
+            print(f"{output_file} exists already - SKIPPING!")
+            return
+    else:
+        # Create temp file
+        if 'psnr' in mode:
+            temp_fd, output_file = tempfile.mkstemp(suffix='.txt', prefix='psnr_')
+            os.close(temp_fd)
+        else:
+            temp_fd, output_file = tempfile.mkstemp(suffix='.json', prefix='vmaf_')
+            os.close(temp_fd)
     
     if not compare_video_properties(reference, distorted):
-        print(f"{output_file} SKIPPING due to property mismatch!")
+        print(f"SKIPPING due to property mismatch!")
+        if not output:
+            os.unlink(output_file)
         return
     
-    if output:
-        lavfi = get_lavfi(mode, output_file)
-    else:
-        lavfi = get_lavfi(mode)
+    lavfi = get_lavfi(mode, output_file)
     print(f"Using mode: {mode}")
 
     cmd = [
@@ -248,6 +315,8 @@ def run_vmaf_analysis(reference, distorted, mode, check=False, output=False):
     print(f"Reference: {os.path.basename(reference)} / Distorted: {os.path.basename(distorted)}")
     
     if check:
+        if not output:
+            os.unlink(output_file)
         return
 
     try:
@@ -256,21 +325,38 @@ def run_vmaf_analysis(reference, distorted, mode, check=False, output=False):
         analysis_duration = end_time - start_time
         
         print(f"Analysis completed in {analysis_duration}")
-        print(f"Results saved to: {output_file}")
+        if output:
+            print(f"Results saved to: {output_file}")
         
-        results = parse_vmaf_results(output_file)
-        if results:
-            print("\n=== ANALYSIS RESULTS ===")
-            print(f"VMAF:       {results['vmaf']:.2f}")
-            print(f"VMAF (neg): {results['vmaf']:.2f}")
-            print(f"PSNR:       {results['psnr']:.2f} dB")
-            print(f"SSIM:       {results['ssim']:.4f}")
-            print(f"MS-SSIM:    {results['ms_ssim']:.4f}")
-            print("========================")
+        if 'psnr' in mode:
+            results = parse_psnr_results(output_file)
+            if results:
+                print("\n=== ANALYSIS RESULTS ===")
+                print(f"PSNR Y:     {results['psnr_y']:.2f} dB")
+                print(f"PSNR U:     {results['psnr_u']:.2f} dB")
+                print(f"PSNR V:     {results['psnr_v']:.2f} dB")
+                print(f"PSNR Avg:   {results['psnr_avg']:.2f} dB")
+                print(f"MSE Avg:    {results['mse_avg']:.2f}")
+                print("========================")
+        else:
+            results = parse_vmaf_results(output_file)
+            if results:
+                print("\n=== ANALYSIS RESULTS ===")
+                print(f"VMAF:       {results['vmaf']:.2f}")
+                print(f"VMAF (neg): {results['vmaf_neg']:.2f}")
+                print(f"PSNR:       {results['psnr']:.2f} dB")
+                print(f"SSIM:       {results['ssim']:.4f}")
+                print(f"MS-SSIM:    {results['ms_ssim']:.4f}")
+                print("========================")
+
+        if not output:
+            os.unlink(output_file)
 
     except Exception as e:
         print(" ".join(cmd))
         print(e)
+        if not output:
+            os.unlink(output_file)
 
 
 def main():
@@ -280,6 +366,7 @@ def main():
     parser.add_argument("-d", '--distorted', required=True, help='Distorted (compressed) video file or folder')
     parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'], default='vmaf4k-full')
     parser.add_argument('--check', action="store_true", help='Dont run VMAF, just do the precheck')
+    parser.add_argument('--output', action="store_true", help='Save output to .vmaf.json or .psnr.txt file')
     args = parser.parse_args()
 
     if os.path.isfile(args.reference):
@@ -303,7 +390,8 @@ def main():
             print(f"ERROR: No reference file found for {distorted}")
             continue
         
-        run_vmaf_analysis(reference, distorted, args.mode, args.check)
+        run_vmaf_analysis(reference, distorted, args.mode, args.check, args.output)
     
+
 if __name__ == "__main__":
     main()
