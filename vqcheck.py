@@ -308,7 +308,13 @@ def save_psnr_json(psnr_data, output_file):
         print(f"Error saving PSNR JSON: {e}")
 
 
-def run_vmaf_analysis(reference, distorted, mode, check=False, output_dir=None):
+def run_vmaf_analysis(reference, distorted, mode, output_dir=None):
+
+    properties_match = compare_video_properties(reference, distorted)
+
+    if mode == "check":
+        return properties_match, None
+
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
         
@@ -324,11 +330,6 @@ def run_vmaf_analysis(reference, distorted, mode, check=False, output_dir=None):
         else:
             temp_fd, output_file = tempfile.mkstemp(suffix='.json', prefix='vmaf_')
             os.close(temp_fd)
-    
-    properties_match = compare_video_properties(reference, distorted)
-
-    if check:
-        return properties_match, None
 
     if not properties_match:
         print(f"SKIPPING due to property mismatch!")
@@ -409,8 +410,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run VMAF analysis comparing a distorted video against a reference video')
     parser.add_argument("-r", '--reference', required=True, help='Reference (original) video file or folder')
     parser.add_argument("-d", '--distorted', required=True, help='Distorted (compressed) video file or folder')
-    parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'], default='vmaf4k-full')
-    parser.add_argument('--check', action="store_true", help='Dont run VMAF, just do the precheck')
+    parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check'], default='vmaf4k-full')
     parser.add_argument('--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
     args = parser.parse_args()
 
@@ -454,7 +454,7 @@ def main():
         print("\n==== VQCheck ====")
         print(f"Reference: {reference}")
         print(f"Distorted: {distorted}")
-        properties_match, results = run_vmaf_analysis(reference, distorted, args.mode, args.check, output_dir)
+        properties_match, results = run_vmaf_analysis(reference, distorted, args.mode, output_dir)
         print("===================")
         
         if properties_match:
