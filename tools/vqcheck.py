@@ -8,6 +8,12 @@ import json
 import tempfile
 from datetime import datetime
 
+try:
+    from models.cvqa.cvqa_fr import run_compressed_vqa_fr
+    from models.cvqa.cvqa_nr import run_compressed_vqa_nr
+    CVQA_AVAILABLE = True
+except ImportError:
+    CVQA_AVAILABLE = False
 
 def get_video_files(dir):
     video_extensions = ('.mp4', '.mkv', '.mov')
@@ -189,6 +195,8 @@ def get_output_filename(distorted, mode, output_dir=None):
     
     if 'psnr' in mode:
         return os.path.join(output_dir, f"{base_name}.psnr.json")
+    elif mode.startswith('cvqa'):
+        return os.path.join(output_dir, f"{base_name}.{mode}.json")
     else:
         return os.path.join(output_dir, f"{base_name}.vmaf.json")
 
@@ -308,6 +316,76 @@ def save_psnr_json(psnr_data, output_file):
         print(f"Error saving PSNR JSON: {e}")
 
 
+def run_cvqa(reference, distorted, mode, output_dir=None):
+    """Run compressed VQA on video files"""
+    if not CVQA_AVAILABLE:
+        print("ERROR: CVQA models not available")
+        return False, None
+    
+    is_reference_based = 'cvqa-fr' in mode
+    is_multiscale = 'ms' in mode
+    
+    if not is_reference_based:
+        dist_info = get_video_info(distorted)
+        if not dist_info:
+            print("ERROR: Could not retrieve distorted video information")
+            return False, None
+        properties_match = True
+    else:
+        properties_match = compare_video_properties(reference, distorted)
+        if not properties_match:
+            print(f"SKIPPING due to property mismatch!")
+            return False, None
+    
+    if output_dir is not None:
+        output_file = get_output_filename(distorted, mode, output_dir)
+        if os.path.exists(output_file):
+            print(f"{output_file} exists already - SKIPPING!")
+            return True, None
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    else:
+        temp_fd, output_file = tempfile.mkstemp(suffix='.json', prefix='cvqa_')
+        os.close(temp_fd)
+    
+    start_time = datetime.now()
+    
+    try:
+        print("\nRESULTS")
+        print(f"Start Time: {start_time}")
+        
+        if is_reference_based:
+            run_compressed_vqa_fr(reference, distorted, output_file, multiscale=is_multiscale)
+        else:
+            run_compressed_vqa_nr(distorted, output_file, multiscale=is_multiscale)
+        
+        end_time = datetime.now()
+        analysis_duration = end_time - start_time
+        
+        print(f"End Time:   {end_time}")
+        print(f"Duration:   {analysis_duration}")
+        
+        results = None
+        if os.path.exists(output_file):
+            with open(output_file, 'r') as f:
+                results = json.load(f)
+                score = results.get('score', 0)
+                print(f"{mode} Score: {score:.4f}")
+                
+                if output_dir is not None:
+                    print(f"\nResults saved to: {output_file}")
+        
+        if output_dir is None and os.path.exists(output_file):
+            os.unlink(output_file)
+        
+        return properties_match, results
+
+    except Exception as e:
+        print(f"Error running CVQA analysis: {e}")
+        if output_dir is None and os.path.exists(output_file):
+            os.unlink(output_file)
+        return False, None
+
+
 def run_vmaf_analysis(reference, distorted, mode, output_dir=None):
 
     properties_match = compare_video_properties(reference, distorted)
@@ -407,12 +485,21 @@ def run_vmaf_analysis(reference, distorted, mode, output_dir=None):
 
 def main():
     
-    parser = argparse.ArgumentParser(description='Run VMAF analysis comparing a distorted video against a reference video')
-    parser.add_argument("-r", '--reference', required=True, help='Reference (original) video file or folder')
+    parser = argparse.ArgumentParser(description='Run video quality analysis comparing a distorted video against a reference video')
+    parser.add_argument("-r", '--reference', help='Reference (original) video file or folder (required for FR methods)')
     parser.add_argument("-d", '--distorted', required=True, help='Distorted (compressed) video file or folder')
-    parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check'], default='vmaf4k-full')
+    parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms'], default='vmaf4k-full')
     parser.add_argument('--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
     args = parser.parse_args()
+
+    # Check if reference is required
+    requires_reference = args.mode in ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-fr', 'cvqa-fr-ms']
+    if requires_reference and not args.reference:
+        parser.error(f"Mode '{args.mode}' requires a reference video.")
+
+    # dummy reference
+    if not requires_reference and not args.reference:
+        args.reference = args.distorted  # ignored by NR methods
 
     print(f"==== STARTING VQCHECK ====") 
     print(f"Reference: {args.reference}")
@@ -454,7 +541,13 @@ def main():
         print("\n==== VQCheck ====")
         print(f"Reference: {reference}")
         print(f"Distorted: {distorted}")
-        properties_match, results = run_vmaf_analysis(reference, distorted, args.mode, output_dir)
+        
+        # Choose analysis function based on mode
+        if args.mode.startswith('cvqa'):
+            properties_match, results = run_cvqa(reference, distorted, args.mode, output_dir)
+        else:
+            properties_match, results = run_vmaf_analysis(reference, distorted, args.mode, output_dir)
+            
         print("===================")
         
         if properties_match:
