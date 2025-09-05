@@ -25,7 +25,7 @@ def transcode(input_dir, output_dir, codec='ffvhuff', overwrite=False, dryrun=Fa
     success_count = 0
 
     for video_file in video_files:
-        output_file = output_path / video_file.name
+        output_file = output_path / f"{video_file.stem}.mkv"
 
         if output_file.exists() and not overwrite:
             print(f"Skipping: {video_file.name} (already exists, use --overwrite to replace)")
