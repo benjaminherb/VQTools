@@ -3,35 +3,36 @@ import argparse
 import subprocess
 from pathlib import Path
 
+VIDEO_EXTENSIONS = ['.mkv', '.mp4', '.mov', '.avi', '.m4v', '.wmv']
 
-def convert_mkv_to_hevc(input_dir, output_dir, codec='ffvhuff', overwrite=False, dryrun=False):
-    """Convert all MKV files to HEVC lossless"""
+def transcode(input_dir, output_dir, codec='ffvhuff', overwrite=False, dryrun=False):
+    """Convert all video files to a specified codec"""
     input_path = Path(input_dir)
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    
-    mkv_files = list(input_path.glob('*.mkv'))
-    mkv_files = [f for f in mkv_files if not f.name.startswith('.')]
-    
-    if not mkv_files:
-        print(f"No MKV files found in '{input_path}'")
+
+    video_files = list(input_path.glob('*'))
+    video_files = [f for f in video_files if f.suffix in VIDEO_EXTENSIONS and not f.name.startswith('.')]
+
+    if not video_files:
+        print(f"No video files found in '{input_path}'")
         return 0
-    
-    print(f"Found {len(mkv_files)} MKV files:")
-    for mkv_file in mkv_files:
-        print(f"  - {mkv_file.name}")
+
+    print(f"Found {len(video_files)} video files:")
+    for video_file in video_files:
+        print(f"  - {video_file.name}")
     
     success_count = 0
-    
-    for mkv_file in mkv_files:
-        output_file = output_path / mkv_file.name
+
+    for video_file in video_files:
+        output_file = output_path / video_file.name
 
         if output_file.exists() and not overwrite:
-            print(f"Skipping: {mkv_file.name} (already exists, use --overwrite to replace)")
+            print(f"Skipping: {video_file.name} (already exists, use --overwrite to replace)")
             continue
         
         cmd = [
-            'ffmpeg', '-i', str(mkv_file),
+            'ffmpeg', '-i', str(video_file),
         ]
         
         if codec == 'h265':
@@ -46,7 +47,7 @@ def convert_mkv_to_hevc(input_dir, output_dir, codec='ffvhuff', overwrite=False,
             '-y', str(output_file)
         ])
         
-        print(f"\nConverting: {mkv_file.name}")
+        print(f"\nConverting: {video_file.name}")
         print(f"Command: {' '.join(cmd)}")
         
         if not dryrun:
@@ -55,7 +56,7 @@ def convert_mkv_to_hevc(input_dir, output_dir, codec='ffvhuff', overwrite=False,
                 print(f"Successfully converted {output_file}")
                 success_count += 1
             except subprocess.CalledProcessError as e:
-                print(f"Error converting {mkv_file.name}:")
+                print(f"Error converting {video_file.name}:")
                 print(f"Return code: {e.returncode}")
                 print(e.stderr)
         else:
@@ -65,8 +66,8 @@ def convert_mkv_to_hevc(input_dir, output_dir, codec='ffvhuff', overwrite=False,
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Convert MKV files to HEVC lossless')
-    parser.add_argument('-i', '--input', required=True, help='Input directory containing MKV files')
+    parser = argparse.ArgumentParser(description='Convert video files to standardized format (lossless)')
+    parser.add_argument('-i', '--input', required=True, help='Input directory containing video files')
     parser.add_argument('-o', '--output', required=True, help='Output directory for converted files')
     parser.add_argument('--codec', choices=['ffvhuff', 'h265'], default='h265', 
                         help='Video codec to use (default: h265)')
@@ -86,9 +87,9 @@ def main():
     print(f"Overwrite: {args.overwrite}")
     print(f"Dry run: {args.dryrun}")
     
-    success_count = convert_mkv_to_hevc(args.input, args.output, args.codec, args.overwrite, args.dryrun)
-    
-    total_files = len(list(input_path.glob('*.mkv')))
+    success_count = transcode(args.input, args.output, args.codec, args.overwrite, args.dryrun)
+
+    total_files = len([f for f in list(input_path.glob('*')) if f.suffix in VIDEO_EXTENSIONS and not f.name.startswith('.')])
     print(f"\nConversion complete: {success_count}/{total_files} successful")
     
     return 0 if success_count == total_files else 1
