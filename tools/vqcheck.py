@@ -148,7 +148,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None):
     elif mode in MODES['cvqa']:
         return properties_match, run_cvqa(reference, distorted, mode, output_dir)
     elif mode in MODES['lpips']:
-        return properties_match, run_lpips(reference, distorted, output_dir=output_dir)
+        return properties_match, run_lpips(reference, distorted, mode, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
