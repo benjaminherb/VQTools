@@ -1,6 +1,50 @@
 import os
 import json
+import subprocess
 from datetime import datetime
+
+## ------ Docker ------ ##
+
+
+def check_docker():
+    """Check if Docker is installed and the daemon is running."""
+    try:
+        # Check if docker command exists
+        result = subprocess.run(['docker', '--version'], capture_output=True, text=True)
+        if result.returncode != 0:
+            return False
+            
+        # Check if daemon is running
+        result = subprocess.run(['docker', 'info'], capture_output=True, text=True)
+        if result.returncode == 0:
+            return True
+            
+        print("ERROR: Docker daemon is not running")
+        return False
+        
+    except FileNotFoundError:
+        print("ERROR: Docker is not installed")
+        return False
+
+
+def build_docker_image(image_name, source_path):
+    """Build the Docker image if it doesn't exist."""
+    
+    # Check if image already exists
+    result = subprocess.run(['docker', 'images', '-q', image_name], capture_output=True, text=True)
+    if result.stdout.strip():
+        return True
+
+    print("Building Docker image...")
+    result = subprocess.run(['docker', 'build',  '--rm', '-t', image_name, source_path], 
+                            capture_output=True, text=True)
+    
+    if result.returncode == 0:
+        print("Docker image built successfully")
+        return True
+    else:
+        print(f"ERROR: Failed to build Docker image: {result.stderr}")
+        return False
 
 
 ## ------ File ------ ##
@@ -60,10 +104,10 @@ def get_output_filename(distorted, mode, output_dir=None):
     
     if 'psnr' in mode:
         return os.path.join(output_dir, f"{base_name}.psnr.json")
-    elif mode.startswith('cvqa'):
-        return os.path.join(output_dir, f"{base_name}.{mode}.json")
-    else:
+    elif 'vmaf' in mode:
         return os.path.join(output_dir, f"{base_name}.vmaf.json")
+    else:
+        return os.path.join(output_dir, f"{base_name}.{mode}.json")
 
 
 def format_duration(seconds):
