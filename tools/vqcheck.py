@@ -5,7 +5,7 @@ import os
 import argparse
 import cv2
 import json
-from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover
+from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover
 from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value
 
 MODES = {
@@ -13,16 +13,22 @@ MODES = {
     'cvqa': ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms'],
     'lpips': ['lpips'],
     'dover': ['dover'],
+    'cover': ['cover'],
     'check': ['check']
 }
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-fr', 'cvqa-fr-ms', 'lpips']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover']
 
 
 def check_model_availability(mode):
     if mode in MODES['dover']:
         if not check_dover():
             return False
+
+    if mode in MODES['cover']:
+        if not check_cover():
+            return False
+
     return True
 
 
@@ -160,6 +166,8 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
         return properties_match, run_lpips(reference, distorted, mode, output_dir, verbose=verbose)
     elif mode in MODES['dover']:
         return properties_match, run_dover(reference, distorted, mode, output_dir)
+    elif mode in MODES['cover']:
+        return properties_match, run_cover(reference, distorted, mode, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
@@ -169,7 +177,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run video quality analysis comparing a distorted video against a reference video')
     parser.add_argument("-d", '--distorted', required=True, help='Distorted (compressed) video file or folder')
     parser.add_argument("-r", '--reference', help='Reference (original) video file or folder (required for FR methods)')
-    parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dover'], default='vmaf4k-full')
+    parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dover', 'cover'], default='vmaf4k-full')
     parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
     parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Enable quiet output')
     args = parser.parse_args()
