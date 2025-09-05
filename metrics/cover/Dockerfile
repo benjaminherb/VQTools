@@ -35,8 +35,12 @@ WORKDIR /project/COVER/pretrained_weights
 RUN wget https://github.com/vztu/COVER/raw/release/Model/COVER.pth
 
 WORKDIR /project/COVER
+# Set random seed for reproducible results
+RUN sed -i '/import torch/a import random\nimport numpy as np\ntorch.manual_seed(42)\nnp.random.seed(42)\nrandom.seed(42)' /project/COVER/evaluate_one_video.py
 # Remove CUDA device call that's causing issues in CPU-only environment
 RUN sed -i '/torch\.cuda\.current_device()/d' /project/COVER/evaluate_one_video.py
+# handle mkv and mov files
 RUN sed -i 's/elif video_path\.endswith("\.mp4"):/elif video_path.endswith((".mp4", ".mkv", ".mov")):/g' /project/COVER/cover/datasets/cover_datasets.py
+
 RUN python evaluate_one_video.py
 
