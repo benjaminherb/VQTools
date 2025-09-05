@@ -6,10 +6,9 @@ BIN_DIR="$HOME/.local/bin"
 
 echo "Installing VQTools"
 
-# Function to create wrapper script content
 create_wrapper_script() {
     local tool_name="$1"
-    local script_name="${tool_name%.py}"  # Remove .py extension
+    local script_name="${tool_name%.py}"  # Remove .py
     
     cat << EOF
 #!/bin/bash
@@ -19,6 +18,7 @@ SHARE_DIR="$HOME/.local/share/vqtools"
 
 cd "\$SHARE_DIR"
 source vqenv/bin/activate
+export PYTHONPATH="\$SHARE_DIR:\$PYTHONPATH"
 
 cd "\$WORKING_PATH"
 python "\$SHARE_DIR/tools/$tool_name" "\$@"
@@ -29,13 +29,14 @@ echo "# Creating directories"
 mkdir -p "${SHARE_DIR}"
 mkdir -p "${BIN_DIR}"
 
-echo "# Copying tools folder and requirements"
+echo "# Copying tools, metrics, and requirements"
 cp -r ./tools "${SHARE_DIR}/"
+cp -r ./metrics "${SHARE_DIR}/"
 cp ./requirements.txt "${SHARE_DIR}/"
 
 cd "$SHARE_DIR"
 
-# Check if virtual environment exists
+# Check if venv exists
 if [ ! -d "vqenv" ]; then
     echo "# Creating virtual environment and installing requirements"
     python3 -m venv vqenv
@@ -47,7 +48,6 @@ else
     pip install -r requirements.txt
 fi
 
-# Get all Python files from tools folder
 TOOLS=($(ls tools/*.py 2>/dev/null))
 
 echo "# Creating wrapper scripts"

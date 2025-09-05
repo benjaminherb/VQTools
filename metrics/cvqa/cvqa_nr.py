@@ -8,11 +8,16 @@ import argparse
 import os
 import json
 from datetime import datetime
+import warnings
 
 import numpy as np
 import torch
 import torch.nn
-from models.cvqa import UGCVQA_NR_model
+from metrics.cvqa import UGCVQA_NR_model
+
+# Suppress torchvision deprecation warnings
+warnings.filterwarnings("ignore", message=".*pretrained.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*weights.*", category=UserWarning)
 import cv2
 from PIL import Image
 
@@ -172,7 +177,7 @@ def video_processing_multi_scale(dist):
 def run_compressed_vqa_nr(dist, output, multiscale=False, is_gpu=False):
 
     device = torch.device('cuda' if is_gpu else 'cpu')
-    print('using ' + str(device))
+    # print('using ' + str(device))
 
     model = UGCVQA_NR_model.resnet50(pretrained=True)
     # model = torch.nn.DataParallel(model)

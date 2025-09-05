@@ -8,11 +8,16 @@ import argparse
 from datetime import datetime
 import os
 import json
+import warnings
 
 import numpy as np
 import torch
 import torch.nn
-from models.cvqa import UGCVQA_FR_model
+from metrics.cvqa import UGCVQA_FR_model
+
+# Suppress torchvision deprecation warnings
+warnings.filterwarnings("ignore", message=".*pretrained.*", category=UserWarning)
+warnings.filterwarnings("ignore", message=".*weights.*", category=UserWarning)
 import cv2
 from PIL import Image
 
@@ -189,7 +194,7 @@ def video_processing_multi_scale(ref, dist):
 def run_compressed_vqa_fr(ref, dist, output, multiscale=False, is_gpu=False):
 
     device = torch.device('cuda' if is_gpu else 'cpu')
-    print('using ' + str(device))
+    # print('using ' + str(device))
 
     model = UGCVQA_FR_model.ResNet50()
     model = torch.nn.DataParallel(model)
@@ -197,7 +202,7 @@ def run_compressed_vqa_fr(ref, dist, output, multiscale=False, is_gpu=False):
     model.load_state_dict(torch.load(model_path, map_location=device))
     
     if not multiscale:
-        print('using the single scale method')
+        # print('using the single scale method')
         video_ref, video_dist, video_name = video_processing(ref, dist)
 
         with torch.no_grad():
@@ -217,7 +222,7 @@ def run_compressed_vqa_fr(ref, dist, output, multiscale=False, is_gpu=False):
             print('The quality socre: {:.4f}'.format(y_val))
 
     else: # multiscale
-        print('using the multi scale method')
+        # print('using the multi scale method')
         video_ref1, video_dist1, video_ref2, video_dist2, video_ref3, video_dist3, video_name = video_processing_multi_scale(ref, dist)
 
         with torch.no_grad():

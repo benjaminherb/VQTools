@@ -67,35 +67,3 @@ def run_lpips(reference, distorted, output_dir = '.', version='0.1', use_gpu=Fal
         
         with open(output_file, 'w') as f:
             json.dump(results, f, indent=2)
-
-
-if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser(description="Run LPIPS on distorted videos.")
-    parser.add_argument("-d", "--distorted", type=str, required=True, help="Path to the distorted video files.")
-    parser.add_argument("-r", "--reference", type=str, required=True, help="Path to the reference video files")
-    parser.add_argument("-o", "--output_dir", type=str, default="./results", help="Directory to save the results.")
-    parser.add_argument('--version', type=str, default='0.1')
-    parser.add_argument('--use_gpu', action='store_true', help='turn on flag to use GPU')
-
-    args = parser.parse_args()
-
-    for filename in os.listdir(args.distorted):
-        #if not filename.endswith('.mkv') or 'decoded' in filename or filename.startswith('.'):
-        if not filename.endswith('.mkv') or filename.startswith('.'):
-            continue
-
-        distorted_path = os.path.join(args.distorted, filename)
-        reference_path = None
-
-        match_default = re.match(r'^(.*)_(.*)_(\d+)x(\d+)_q(\d+)\.mkv$', filename)
-        match_upscaled = re.match(r'^(.*)_(.*)_(\d+)x(\d+)_q(\d+)\..*\.mkv$', filename)
-        if match_default:
-            reference_path = os.path.join(args.reference, f"{match_default.group(1)}_original_3840x2160_q0.mkv")
-        elif match_upscaled:
-            reference_path = os.path.join(args.reference, f"{match_upscaled.group(1)}_original_3840x2160_q0.mkv")
-        else:
-            print(f"Skipping {distorted_path}")
-            continue
-
-        run_lpips(reference_path, distorted_path, args.output_dir)

@@ -1,0 +1,80 @@
+import os
+import json
+from pathlib import Path
+import tempfile
+from datetime import datetime
+
+from metrics.cvqa.cvqa_fr import run_compressed_vqa_fr
+from metrics.cvqa.cvqa_nr import run_compressed_vqa_nr
+from metrics.utils import get_output_filename
+
+MODEL_LINKS = {
+    "UGCVQA_FR_model.pth": "https://drive.google.com/file/d/1ohKNe_r0bXBg7qp4vQj0mDT3CwJPHVMM/view?usp=sharing",
+    "UGCVQA_NR_model.pth": "https://drive.google.com/file/d/1K73padYMgq70zVWVVLIODs9SyIhdgqkT/view?usp=sharing"
+}
+
+def check_models():
+    missing_models = []
+    for model_name in MODEL_LINKS.keys():
+        model_path = os.path.join('models/cvqa/ckpts', model_name)
+        if not os.path.exists(model_path):
+            missing_models.append(model_name)
+    
+    if missing_models:
+        print(f"Missing models: {', '.join(missing_models)}")
+        print("Please download them manually from the provided links and add them to the 'models' directory.")
+        return False
+    return True
+
+
+def run_cvqa(reference, distorted, mode, output_dir=None):
+    is_reference_based = 'cvqa-fr' in mode
+    is_multiscale = 'ms' in mode
+    
+    if output_dir is not None:
+        output_file = get_output_filename(distorted, mode, output_dir)
+        if os.path.exists(output_file):
+            print(f"{output_file} exists already - SKIPPING!")
+            return None
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    else:
+        temp_fd, output_file = tempfile.mkstemp(suffix='.json', prefix='cvqa_')
+        os.close(temp_fd)
+    
+    start_time = datetime.now()
+    
+    try:
+        print("\nRESULTS")
+        print(f"Start Time: {start_time}")
+        
+        if is_reference_based:
+            run_compressed_vqa_fr(reference, distorted, output_file, multiscale=is_multiscale)
+        else:
+            run_compressed_vqa_nr(distorted, output_file, multiscale=is_multiscale)
+        
+        end_time = datetime.now()
+        analysis_duration = end_time - start_time
+        
+        print(f"End Time:   {end_time}")
+        print(f"Duration:   {analysis_duration}")
+        
+        results = None
+        if os.path.exists(output_file):
+            with open(output_file, 'r') as f:
+                results = json.load(f)
+                score = results.get('score', 0)
+                print(f"{mode} Score: {score:.4f}")
+                
+                if output_dir is not None:
+                    print(f"\nResults saved to: {output_file}")
+        
+        if output_dir is None and os.path.exists(output_file):
+            os.unlink(output_file)
+        
+        return results
+
+    except Exception as e:
+        print(f"Error running CVQA analysis: {e}")
+        if output_dir is None and os.path.exists(output_file):
+            os.unlink(output_file)
+        return None
