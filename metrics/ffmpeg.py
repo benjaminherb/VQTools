@@ -4,10 +4,10 @@ import subprocess
 from datetime import datetime
 import json
 
-from metrics.utils import get_output_filename, save_json
+from metrics.utils import get_output_filename, save_json, print_key_value, ts
 
 
-def run_ffmpeg(reference, distorted, mode, output_dir=None):
+def run_ffmpeg(reference, distorted, mode, output_dir=None, verbose=True):
 
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
@@ -33,24 +33,24 @@ def run_ffmpeg(reference, distorted, mode, output_dir=None):
 
     try:
         print("\nRESULTS")
-        print(f"Start Time: {start_time}")
+        print_key_value("Start Time", ts(start_time))
         subprocess.run(cmd, capture_output=True, text=True, check=True)
         end_time = datetime.now()
         analysis_duration = end_time - start_time
-        
-        print(f"End Time:   {end_time}")
-        print(f"Duration:   {analysis_duration}")
-        
+
+        print_key_value("End Time", ts(end_time))
+        print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
+
         results = None
         if 'psnr' in mode:
             psnr_data = parse_psnr_results(output_file)
             if psnr_data:
                 pooled = psnr_data['pooled_metrics']
-                print(f"PSNR Y:     {pooled['psnr_y']['mean']:.2f} dB")
-                print(f"PSNR U:     {pooled['psnr_u']['mean']:.2f} dB")
-                print(f"PSNR V:     {pooled['psnr_v']['mean']:.2f} dB")
-                print(f"PSNR Avg:   {pooled['psnr_avg']['mean']:.2f} dB")
-                print(f"MSE Avg:    {pooled['mse_avg']['mean']:.2f}")
+                print_key_value("PSNR Y", f"{pooled['psnr_y']['mean']:.2f} dB")
+                print_key_value("PSNR U", f"{pooled['psnr_u']['mean']:.2f} dB")
+                print_key_value("PSNR V", f"{pooled['psnr_v']['mean']:.2f} dB")
+                print_key_value("PSNR Avg", f"{pooled['psnr_avg']['mean']:.2f} dB")
+                print_key_value("MSE Avg", f"{pooled['mse_avg']['mean']:.2f}")
                 
                 if output_dir is not None:
                     final_output_file = get_output_filename(distorted, mode, output_dir)
@@ -61,15 +61,15 @@ def run_ffmpeg(reference, distorted, mode, output_dir=None):
         else: # VMAF
             results = parse_vmaf_results(output_file)
             if results:
-                print(f"VMAF:       {results['vmaf']:.2f}")
+                print_key_value("VMAF", f"{results['vmaf']:.2f}")
                 if 'neg' in mode:
-                    print(f"VMAF (neg): {results['vmaf_neg']:.2f}")
-                print(f"PSNR:       {results['psnr']:.2f} dB")
-                print(f"PSNR Y:     {results['psnr_y']:.2f} dB")
-                print(f"PSNR CB:    {results['psnr_cb']:.2f} dB")
-                print(f"PSNR CR:    {results['psnr_cr']:.2f} dB")
-                print(f"SSIM:       {results['ssim']:.4f}")
-                print(f"MS-SSIM:    {results['ms_ssim']:.4f}")
+                    print_key_value("VMAF (neg)", f"{results['vmaf_neg']:.2f}")
+                print_key_value("PSNR", f"{results['psnr']:.2f} dB")
+                print_key_value("PSNR Y", f"{results['psnr_y']:.2f} dB")
+                print_key_value("PSNR CB", f"{results['psnr_cb']:.2f} dB")
+                print_key_value("PSNR CR", f"{results['psnr_cr']:.2f} dB")
+                print_key_value("SSIM", f"{results['ssim']:.4f}")
+                print_key_value("MS-SSIM", f"{results['ms_ssim']:.4f}")
                 
                 if output_dir is not None:
                     print(f"\nResults saved to: {output_file}")

@@ -11,7 +11,7 @@ from datetime import datetime
 import contextlib
 import torch 
 
-from metrics.utils import get_output_filename, save_json
+from metrics.utils import get_output_filename, save_json, print_key_value, ts
 
 
 def get_device():
@@ -28,7 +28,7 @@ def extract_frames(video_path, output_dir):
     cmd = ['ffmpeg', '-i', video_path, '-y', os.path.join(output_dir, 'frame_%06d.png')]
     subprocess.run(cmd, check=True, capture_output=True)
 
-def run_lpips(reference, distorted, mode, output_dir, net='alex', version='0.1'):
+def run_lpips(reference, distorted, mode, output_dir=None, verbose=True, net='alex', version='0.1'):
 
     output_file = None
     if output_dir is not None:
@@ -40,7 +40,7 @@ def run_lpips(reference, distorted, mode, output_dir, net='alex', version='0.1')
 
     start_time = datetime.now()
     print("\nRESULTS")
-    print(f"Start Time: {start_time}")
+    print_key_value("Start Time", ts(start_time))
 
     # Suppress LPIPS setup messages
     with contextlib.redirect_stdout(open(os.devnull, 'w')), contextlib.redirect_stderr(open(os.devnull, 'w')):
@@ -91,11 +91,11 @@ def run_lpips(reference, distorted, mode, output_dir, net='alex', version='0.1')
         end_time = datetime.now()
         analysis_duration = end_time - start_time
 
-        print(f"End Time:   {end_time}")
-        print(f"Duration:   {analysis_duration}")
+        print_key_value("End Time", ts(end_time))
+        print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
         
     if output_file is not None:
         save_json(results, output_file)
     
-    print("LPIPS:      {:.4f}".format(results["metadata"]["mean_distance"]))
+    print_key_value("LPIPS", "{:.4f}".format(results["metadata"]["mean_distance"]))
     return results 

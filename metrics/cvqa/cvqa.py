@@ -6,7 +6,7 @@ from datetime import datetime
 
 from metrics.cvqa.cvqa_fr import run_compressed_vqa_fr
 from metrics.cvqa.cvqa_nr import run_compressed_vqa_nr
-from metrics.utils import get_output_filename
+from metrics.utils import get_output_filename, print_key_value, ts
 
 MODEL_LINKS = {
     "UGCVQA_FR_model.pth": "https://drive.google.com/file/d/1ohKNe_r0bXBg7qp4vQj0mDT3CwJPHVMM/view?usp=sharing",
@@ -27,7 +27,7 @@ def check_models():
     return True
 
 
-def run_cvqa(reference, distorted, mode, output_dir=None):
+def run_cvqa(reference, distorted, mode, output_dir=None, verbose=True):
     is_reference_based = 'cvqa-fr' in mode
     is_multiscale = 'ms' in mode
     
@@ -45,8 +45,9 @@ def run_cvqa(reference, distorted, mode, output_dir=None):
     
     try:
         print("\nRESULTS")
-        print(f"Start Time: {start_time}")
-        
+        print_key_value("Start Time", ts(start_time))
+
+
         if is_reference_based:
             run_compressed_vqa_fr(reference, distorted, output_file, multiscale=is_multiscale)
         else:
@@ -54,20 +55,17 @@ def run_cvqa(reference, distorted, mode, output_dir=None):
         
         end_time = datetime.now()
         analysis_duration = end_time - start_time
-        
-        print(f"End Time:   {end_time}")
-        print(f"Duration:   {analysis_duration}")
-        
+
+        print_key_value("End Time", ts(end_time))
+        print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
+
         results = None
         if os.path.exists(output_file):
             with open(output_file, 'r') as f:
                 results = json.load(f)
                 score = results.get('score', 0)
-                print(f"{mode} Score: {score:.4f}")
-                
-                if output_dir is not None:
-                    print(f"\nResults saved to: {output_file}")
-        
+                print_key_value(f"Score", f"{score:.4f}")
+
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)
         

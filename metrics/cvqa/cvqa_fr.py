@@ -218,9 +218,6 @@ def run_compressed_vqa_fr(ref, dist, output, multiscale=False, is_gpu=False):
             
             y_val = outputs.item()
 
-            print('The video name: ' + video_name)
-            print('The quality socre: {:.4f}'.format(y_val))
-
     else: # multiscale
         # print('using the multi scale method')
         video_ref1, video_dist1, video_ref2, video_dist2, video_ref3, video_dist3, video_name = video_processing_multi_scale(ref, dist)
@@ -263,9 +260,6 @@ def run_compressed_vqa_fr(ref, dist, output, multiscale=False, is_gpu=False):
             w3_csf = 0.0745
 
             y_val = pow(y_val1, w1_csf) * pow(y_val2, w2_csf) * pow(y_val3, w3_csf)
-
-            print('The video name: ' + video_name)
-            print('The quality socre: {:.4f}'.format(y_val))
 
 
 
