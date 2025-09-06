@@ -129,6 +129,7 @@ def main():
             'lpips': ('lpips', lambda x: x["metadata"]['mean_distance']),
             'dover': ('dover', lambda x: x["dover"]),
             'dover': ('dover', lambda x: x["overall_score"]),
+            'dover': ('dover', lambda x: x["fused_score"]),
             'fastvqa': ('fastvqa', lambda x: x['fastervqa_score']),
             'musiq': ('musiq', lambda x: x['mean_musiq']),
             'qalign': ('qalign', lambda x: x['qalign_score']),
@@ -139,6 +140,9 @@ def main():
             'cvqa-fr': ('cvqa-fr', lambda x: x['score']),
             'cvqa-fr-ms': ('cvqa-fr-ms', lambda x: x['score']),
             'p12044': ('p12044', lambda x: x['score']),
+            'cover': ('cover', lambda x: x['fused_score']),
+            'uvq': ('uvq', lambda x: x['uvq']),
+          
         }
         
         for metric_key, (output_key, extractor) in metric_mappings.items():
