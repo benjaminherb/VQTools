@@ -13,7 +13,7 @@ MODEL_LINKS = {
     "UGCVQA_NR_model.pth": "https://drive.google.com/file/d/1K73padYMgq70zVWVVLIODs9SyIhdgqkT/view?usp=sharing"
 }
 
-def check_models():
+def check_cvqa():
     missing_models = []
     for model_name in MODEL_LINKS.keys():
         model_path = os.path.join('models/cvqa/ckpts', model_name)

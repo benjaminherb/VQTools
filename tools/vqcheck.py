@@ -5,7 +5,7 @@ import os
 import argparse
 import cv2
 import json
-from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover
+from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa
 from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value
 
 MODES = {
@@ -29,6 +29,9 @@ def check_model_availability(mode):
         if not check_cover():
             return False
 
+    if mode in MODES['cvqa']:
+        if not check_cvqa():
+            return False
     return True
 
 
