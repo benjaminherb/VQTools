@@ -4,3 +4,4 @@ from metrics.ffmpeg import run_ffmpeg
 from metrics.dover.dover import run_dover, check_dover
 from metrics.cover.cover import run_cover, check_cover
 from metrics.uvq.uvq import run_uvq, check_uvq
+from metrics.maxvqa.maxvqa import run_maxvqa, check_maxvqa
