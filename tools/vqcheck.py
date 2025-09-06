@@ -5,8 +5,8 @@ import os
 import argparse
 import cv2
 import json
-from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa
-from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value
+from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa, run_uvq, check_uvq
+from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info
 
 MODES = {
     'ffmpeg': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'],
@@ -14,10 +14,11 @@ MODES = {
     'lpips': ['lpips'],
     'dover': ['dover'],
     'cover': ['cover'],
+    'uvq': ['uvq'],
     'check': ['check']
 }
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-fr', 'cvqa-fr-ms', 'lpips']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq']
 
 
 def check_model_availability(mode):
@@ -32,66 +33,12 @@ def check_model_availability(mode):
     if mode in MODES['cvqa']:
         if not check_cvqa():
             return False
+
+    if mode in MODES['uvq']:
+        if not check_uvq():
+            return False
+
     return True
-
-
-def get_video_info(video_path):
-    cmd = [
-        'ffprobe',
-        '-v', 'quiet',
-        '-print_format', 'json',
-        '-show_streams',
-        '-show_format',
-        '-select_streams', 'v:0',
-        video_path
-    ]
-    
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-        data = json.loads(result.stdout)
-        
-        if not data['streams']:
-            raise Exception(f"No video stream found in {video_path}")
-            
-        stream = data['streams'][0]
-        format_info = data.get('format', {})
-        fps_str = stream.get('r_frame_rate', '0/1')
-        if '/' in fps_str:
-            num, den = map(int, fps_str.split('/'))
-            fps = num / den if den != 0 else 0
-        else:
-            fps = float(fps_str)
-        frame_count = get_frame_count_cv2(video_path)
-        duration = frame_count / fps if fps > 0 else 0
-        width = int(stream.get('width', 0))
-        height = int(stream.get('height', 0))
-
-        return {
-            'width': width,
-            'height': height,
-            'resolution': f"{width}x{height}",
-            'fps': fps,
-            'pix_fmt': stream.get('pix_fmt', 'unknown'),
-            'color_range': stream.get('color_range', 'unknown'),
-            'file_size': int(format_info.get('size', 0)),
-            'frame_count': frame_count,
-            'duration': duration
-        }
-        
-    except subprocess.CalledProcessError as e:
-        print(f"Error running ffprobe on {video_path}: {e}")
-        return None
-    except json.JSONDecodeError as e:
-        print(f"Error parsing ffprobe output for {video_path}: {e}")
-        return None
-
-
-def get_frame_count_cv2(video_path):
-    cap = cv2.VideoCapture(video_path)
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    cap.release()
-    return frame_count
-
 
 
 def compare_video_properties(reference, distorted, verbose=True):
@@ -171,6 +118,8 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
         return properties_match, run_dover(reference, distorted, mode, output_dir)
     elif mode in MODES['cover']:
         return properties_match, run_cover(reference, distorted, mode, output_dir)
+    elif mode in MODES['uvq']:
+        return properties_match, run_uvq(distorted, mode, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
@@ -180,7 +129,7 @@ def main():
     parser = argparse.ArgumentParser(description='Run video quality analysis comparing a distorted video against a reference video')
     parser.add_argument("-d", '--distorted', required=True, help='Distorted (compressed) video file or folder')
     parser.add_argument("-r", '--reference', help='Reference (original) video file or folder (required for FR methods)')
-    parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dover', 'cover'], default='vmaf4k-full')
+    parser.add_argument("-m", '--mode', choices=['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dover', 'cover', 'uvq'], default='vmaf4k-full')
     parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
     parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Enable quiet output')
     args = parser.parse_args()

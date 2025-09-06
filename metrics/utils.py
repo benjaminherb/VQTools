@@ -2,6 +2,69 @@ import os
 import json
 import subprocess
 from datetime import datetime
+import cv2
+
+
+## ------ Video ------ ##
+
+
+def get_frame_count_cv2(video_path):
+    cap = cv2.VideoCapture(video_path)
+    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+    return frame_count
+
+
+
+def get_video_info(video_path):
+    cmd = [
+        'ffprobe',
+        '-v', 'quiet',
+        '-print_format', 'json',
+        '-show_streams',
+        '-show_format',
+        '-select_streams', 'v:0',
+        video_path
+    ]
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        data = json.loads(result.stdout)
+        
+        if not data['streams']:
+            raise Exception(f"No video stream found in {video_path}")
+            
+        stream = data['streams'][0]
+        format_info = data.get('format', {})
+        fps_str = stream.get('r_frame_rate', '0/1')
+        if '/' in fps_str:
+            num, den = map(int, fps_str.split('/'))
+            fps = num / den if den != 0 else 0
+        else:
+            fps = float(fps_str)
+        frame_count = get_frame_count_cv2(video_path)
+        duration = frame_count / fps if fps > 0 else 0
+        width = int(stream.get('width', 0))
+        height = int(stream.get('height', 0))
+
+        return {
+            'width': width,
+            'height': height,
+            'resolution': f"{width}x{height}",
+            'fps': fps,
+            'pix_fmt': stream.get('pix_fmt', 'unknown'),
+            'color_range': stream.get('color_range', 'unknown'),
+            'file_size': int(format_info.get('size', 0)),
+            'frame_count': frame_count,
+            'duration': duration
+        }
+        
+    except subprocess.CalledProcessError as e:
+        print(f"Error running ffprobe on {video_path}: {e}")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"Error parsing ffprobe output for {video_path}: {e}")
+        return None
 
 ## ------ Docker ------ ##
 
