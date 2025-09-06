@@ -28,7 +28,7 @@ RUN git clone --recursive https://github.com/dmlc/decord && \
 RUN git clone https://github.com/QualityAssessment/DOVER.git 
 
 WORKDIR /project/DOVER
-RUN pip3 install -e .  
+RUN pip3 install --no-cache-dir -e .  
 RUN mkdir pretrained_weights 
 WORKDIR /project/DOVER/pretrained_weights
 RUN wget https://github.com/QualityAssessment/DOVER/releases/download/v0.1.0/DOVER.pth 

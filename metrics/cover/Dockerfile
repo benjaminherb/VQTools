@@ -28,8 +28,8 @@ RUN git clone --recursive https://github.com/dmlc/decord && \
 RUN git clone https://github.com/taco-group/COVER.git
 
 WORKDIR /project/COVER
-RUN pip3 install pyiqa
-RUN pip3 install -e .  
+RUN pip3 install --no-cache-dir pyiqa
+RUN pip3 install --no-cache-dir -e .  
 RUN mkdir pretrained_weights 
 WORKDIR /project/COVER/pretrained_weights
 RUN wget https://github.com/vztu/COVER/raw/release/Model/COVER.pth
