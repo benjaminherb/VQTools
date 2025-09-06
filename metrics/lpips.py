@@ -11,17 +11,7 @@ from datetime import datetime
 import contextlib
 import torch 
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts
-
-
-def get_device():
-    """Get the appropriate device for computation."""
-    if torch.cuda.is_available():
-        return torch.device('cuda')
-    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
-        return torch.device('mps')
-    else:
-        return torch.device('cpu')
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device
 
 
 def extract_frames(video_path, output_dir):

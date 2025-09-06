@@ -3,6 +3,7 @@ import json
 import subprocess
 from datetime import datetime
 import cv2
+import torch
 
 
 ## ------ Video ------ ##
@@ -236,3 +237,17 @@ def ts(time=None):
     if time:
         return time.strftime("%Y-%m-%d %H:%M:%S")
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+## ------ PyTorch ------ ##
+
+def get_device():
+    """Get the appropriate device for computation."""
+    if torch.cuda.is_available():
+        return torch.device('cuda')
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        return torch.device('mps')
+    elif torch.backends.metal.is_available():
+        return torch.device('metal')
+    else:
+        return torch.device('cpu')
