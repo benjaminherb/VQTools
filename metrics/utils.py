@@ -61,10 +61,10 @@ def get_video_info(video_path):
         }
         
     except subprocess.CalledProcessError as e:
-        print(f"Error running ffprobe on {video_path}: {e}")
+        print_line(f"Error running ffprobe on {video_path}: {e}", force=True)
         return None
     except json.JSONDecodeError as e:
-        print(f"Error parsing ffprobe output for {video_path}: {e}")
+        print_line(f"Error parsing ffprobe output for {video_path}: {e}", force=True)
         return None
 
 ## ------ Docker ------ ##
@@ -82,12 +82,12 @@ def check_docker():
         result = subprocess.run(['docker', 'info'], capture_output=True, text=True)
         if result.returncode == 0:
             return True
-            
-        print("ERROR: Docker daemon is not running")
+
+        print_line("ERROR: Docker daemon is not running", force=True)
         return False
         
     except FileNotFoundError:
-        print("ERROR: Docker is not installed")
+        print_line("ERROR: Docker is not installed", force=True)
         return False
 
 
@@ -99,15 +99,15 @@ def build_docker_image(image_name, source_path):
     if result.stdout.strip():
         return True
 
-    print("Building Docker image...")
+    print_line("Building Docker image...", force=True)
     result = subprocess.run(['docker', 'build',  '--rm', '-t', image_name, source_path], 
                             capture_output=True, text=True)
     
     if result.returncode == 0:
-        print("Docker image built successfully")
+        print_line("Docker image built successfully", force=True)
         return True
     else:
-        print(f"ERROR: Failed to build Docker image: {result.stderr}")
+        print_line(f"ERROR: Failed to build Docker image: {result.stderr}", force=True)
         return False
 
 
@@ -154,7 +154,7 @@ def save_json(data, output_file):
         with open(output_file, 'w') as f:
             json.dump(data, f, indent=2)
     except Exception as e:
-        print(f"Error saving JSON to {output_file}: {e}")
+        print_line(f"Error saving JSON to {output_file}: {e}", force=True)
 
 
 ## ------ Format ------ ##
@@ -199,8 +199,31 @@ def format_file_size(size_bytes):
     return f"{size_bytes:.1f} TB"
 
 
-def print_separator(text=None, width=40, char='=', newline=False):
+## ------ Print ------ ##
+_quiet_mode = False
+
+
+def set_quiet_mode(quiet=True):
+    """Set global quiet mode for printing."""
+    global _quiet_mode
+    _quiet_mode = quiet
+
+
+def print_line(text=None, force=False):
+    """Print a line of text unless in quiet mode, unless forced."""
+    if _quiet_mode and not force:
+        return
+
+    if text is None:
+        print()
+    else:
+        print(text)
+
+def print_separator(text=None, width=40, char='=', newline=False, force=False):
     """Print a separator line with optional centered text."""
+    if _quiet_mode and not force:
+        return
+
     if text:
         text_len = len(text)
         if text_len >= width - 4:  # check if its too long
@@ -216,11 +239,15 @@ def print_separator(text=None, width=40, char='=', newline=False):
     
     if newline:
         print()
+
     print(separator)
 
 
-def print_key_value(key, value, width=40):
+def print_key_value(key, value, width=40, force=False):
     """Print a key-value pair with left-aligned key and right-aligned value"""
+    if _quiet_mode and not force:
+        return
+
     key_str = f"{key}:"
     total_needed = len(key_str) + len(str(value)) + 1 
     

@@ -1,42 +1,39 @@
 import os
 import subprocess
 import tempfile
-import csv
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line
 
 
 def check_dover():
     """Check if Docker and DOVER image are available."""
     if not check_docker():
-        print("ERROR: Docker is required for DOVER but is not available")
+        print_line("ERROR: Docker is required for DOVER but is not available", force=True)
         return False
 
     if not build_docker_image('dover:0.1.0', str(Path(__file__).parent)):
-        print("ERROR: Failed to build DOVER Docker image")
+        print_line("ERROR: Failed to build DOVER Docker image", force=True)
         return False
     
     return True
 
 
-def run_dover(reference, distorted, mode, output_dir=None):
+def run_dover(mode, distorted, output_dir=None):
     """Run DOVER video quality assessment."""
     
     # Prepare output file
+    output_file = None
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
         if os.path.exists(output_file):
-            print(f"{output_file} exists already - SKIPPING!")
+            print_line(f"{output_file} exists already - SKIPPING!", force=True)
             return None
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
-    else:
-        temp_fd, output_file = tempfile.mkstemp(suffix='.json', prefix='dover_')
-        os.close(temp_fd)
     
     start_time = datetime.now()
-    print("\nRESULTS")
+    print_line("\nRESULTS")
     print_key_value("Start Time", ts(start_time))
     
     try:
@@ -48,7 +45,7 @@ def run_dover(reference, distorted, mode, output_dir=None):
         
         # Check if file exists
         if not os.path.exists(distorted):
-            print(f"ERROR: Video file does not exist: {distorted}")
+            print_line(f"ERROR: Video file does not exist: {distorted}", force=True)
             return None
             
         cmd = [
@@ -64,7 +61,7 @@ def run_dover(reference, distorted, mode, output_dir=None):
         result = subprocess.run(cmd, capture_output=True, text=True)
         
         if result.returncode != 0:
-            print(f"ERROR: DOVER evaluation failed: {result.stderr}")
+            print_line(f"ERROR: DOVER evaluation failed: {result.stderr}", force=True)
             return None
         
         # Parse results from evaluate_one_video output
@@ -79,15 +76,15 @@ def run_dover(reference, distorted, mode, output_dir=None):
         if results:
             print_key_value("Technical Score", f"{results['technical_score']:.4f}")
             print_key_value("Aesthetic Score", f"{results['aesthetic_score']:.4f}")
-            print_key_value("Fused Score", f"{results['fused_score']:.4f}")
+            print_key_value("Fused Score", f"{results['fused_score']:.4f}", force=True)
         
-        if output_file.endswith('.json'):
+        if output_file:
             save_json(results, output_file)
         
         return results
         
     except Exception as e:
-        print(f"ERROR: DOVER evaluation failed: {e}")
+        print_line(f"ERROR: DOVER evaluation failed: {e}", force=True)
         return None
 
 

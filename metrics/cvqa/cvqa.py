@@ -6,7 +6,7 @@ from datetime import datetime
 
 from metrics.cvqa.cvqa_fr import run_compressed_vqa_fr
 from metrics.cvqa.cvqa_nr import run_compressed_vqa_nr
-from metrics.utils import get_output_filename, print_key_value, ts
+from metrics.utils import get_output_filename, print_key_value, ts, print_line
 
 MODEL_LINKS = {
     "UGCVQA_FR_model.pth": "https://drive.google.com/file/d/1ohKNe_r0bXBg7qp4vQj0mDT3CwJPHVMM/view?usp=sharing",
@@ -21,20 +21,22 @@ def check_cvqa():
             missing_models.append(model_name)
     
     if missing_models:
-        print(f"Missing models: {', '.join(missing_models)}")
-        print("Please download them manually from the provided links and add them to the 'models' directory.")
+        print_line(f"Missing models: {', '.join(missing_models)}", force=True)
+        print_line("Please download them manually from the provided links and add them to the 'models' directory.", force=True)
+        for model_name in missing_models:
+            print_line(f"{model_name}: {MODEL_LINKS[model_name]}", force=True)
         return False
     return True
 
 
-def run_cvqa(reference, distorted, mode, output_dir=None, verbose=True):
+def run_cvqa(mode, distorted, reference, output_dir=None):
     is_reference_based = 'cvqa-fr' in mode
     is_multiscale = 'ms' in mode
     
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
         if os.path.exists(output_file):
-            print(f"{output_file} exists already - SKIPPING!")
+            print_line(f"{output_file} exists already - SKIPPING!", force=True)
             return None
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
     else:
@@ -44,7 +46,7 @@ def run_cvqa(reference, distorted, mode, output_dir=None, verbose=True):
     start_time = datetime.now()
     
     try:
-        print("\nRESULTS")
+        print_line("\nRESULTS")
         print_key_value("Start Time", ts(start_time))
 
 
@@ -64,7 +66,7 @@ def run_cvqa(reference, distorted, mode, output_dir=None, verbose=True):
             with open(output_file, 'r') as f:
                 results = json.load(f)
                 score = results.get('score', 0)
-                print_key_value(f"Score", f"{score:.4f}")
+                print_key_value(f"Score", f"{score:.4f}", force=True)
 
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)
@@ -72,7 +74,7 @@ def run_cvqa(reference, distorted, mode, output_dir=None, verbose=True):
         return results
 
     except Exception as e:
-        print(f"Error running CVQA analysis: {e}")
+        print_line(f"Error running CVQA analysis: {e}", force=True)
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)
         return None

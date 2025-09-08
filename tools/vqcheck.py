@@ -6,7 +6,7 @@ import argparse
 import cv2
 import json
 from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa, run_uvq, check_uvq, run_maxvqa, check_maxvqa, run_pyiqa, check_pyiqa
-from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info
+from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet_mode, print_line
 
 MODES = {
     'ffmpeg': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'],
@@ -52,25 +52,23 @@ def check_model_availability(mode):
     return True
 
 
-def compare_video_properties(reference, distorted, verbose=True):
+def compare_video_properties(reference, distorted):
     ref_info = get_video_info(reference)
     dist_info = get_video_info(distorted)
     
     if not ref_info or not dist_info:
-        if verbose:
-            print_key_value("ERROR", "Could not retrieve video information")
+        print_key_value("ERROR", "Could not retrieve video information", force=True)
         return False
     
-    if verbose:
-        print()
-        print(f"{'ATTRIBUTE':<13} {'REFERENCE':<14} {'DISTORTED':<14}")
-        print(f"{'Resolution':<13} {ref_info['resolution']:<14} {dist_info['resolution']:<14}")
-        print(f"{'Framerate':<13} {ref_info['fps']:.3f} fps{'':<4} {dist_info['fps']:.3f} fps{'':<4}")
-        print(f"{'Frame count':<13} {ref_info['frame_count']:<14} {dist_info['frame_count']:<14}")
-        print(f"{'Duration':<13} {format_duration(ref_info['duration']):<14} {format_duration(dist_info['duration']):<14}")
-        print(f"{'Pixel format':<13} {ref_info['pix_fmt']:<14} {dist_info['pix_fmt']:<14}")
-        print(f"{'Color range':<13} {ref_info['color_range']:<14} {dist_info['color_range']:<14}")
-        print(f"{'File size':<13} {format_file_size(ref_info['file_size']):<14} {format_file_size(dist_info['file_size']):<14}")
+    print_line()
+    print_line(f"{'ATTRIBUTE':<13} {'REFERENCE':<14} {'DISTORTED':<14}")
+    print_line(f"{'Resolution':<13} {ref_info['resolution']:<14} {dist_info['resolution']:<14}")
+    print_line(f"{'Framerate':<13} {ref_info['fps']:.3f} fps{'':<4} {dist_info['fps']:.3f} fps{'':<4}")
+    print_line(f"{'Frame count':<13} {ref_info['frame_count']:<14} {dist_info['frame_count']:<14}")
+    print_line(f"{'Duration':<13} {format_duration(ref_info['duration']):<14} {format_duration(dist_info['duration']):<14}")
+    print_line(f"{'Pixel format':<13} {ref_info['pix_fmt']:<14} {dist_info['pix_fmt']:<14}")
+    print_line(f"{'Color range':<13} {ref_info['color_range']:<14} {dist_info['color_range']:<14}")
+    print_line(f"{'File size':<13} {format_file_size(ref_info['file_size']):<14} {format_file_size(dist_info['file_size']):<14}")
         
     messages = [] 
     if ref_info['width'] != dist_info['width'] or ref_info['height'] != dist_info['height']:
@@ -92,18 +90,17 @@ def compare_video_properties(reference, distorted, verbose=True):
     
     has_errors = any(level == "ERROR" for level, _ in messages)
     has_warnings = any(level == "WARNING" for level, _ in messages)
-    if verbose:
-        if len(messages) > 0:
-            print()
+    if len(messages) > 0:
+        print_line()
 
-        for level, msg in messages:
-            print_key_value(level, msg)
+    for level, msg in messages:
+        print_key_value(level, msg)
         
     if has_errors:
         return False
     
-    if verbose and has_warnings:
-        print("This may affect results but analysis will continue...")
+    if has_warnings:
+        print_line("This may affect results but analysis will continue...")
         
     return True
 
@@ -111,7 +108,7 @@ def compare_video_properties(reference, distorted, verbose=True):
 def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True):
     properties_match = True
     if mode in FR_MODES and reference is not None:
-        properties_match = compare_video_properties(reference, distorted, verbose=verbose)
+        properties_match = compare_video_properties(reference, distorted)
 
         if mode == 'check':
             return properties_match, None
@@ -120,21 +117,21 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
             return properties_match, None
 
     if mode in MODES['ffmpeg']:
-        return properties_match, run_ffmpeg(reference, distorted, mode, output_dir, verbose=verbose)
+        return properties_match, run_ffmpeg(mode, distorted, reference, output_dir)
     elif mode in MODES['cvqa']:
-        return properties_match, run_cvqa(reference, distorted, mode, output_dir, verbose=verbose)
+        return properties_match, run_cvqa(mode, distorted, reference, output_dir)
     elif mode in MODES['lpips']:
-        return properties_match, run_lpips(reference, distorted, mode, output_dir, verbose=verbose)
+        return properties_match, run_lpips(mode, distorted, reference, output_dir)
     elif mode in MODES['dover']:
-        return properties_match, run_dover(reference, distorted, mode, output_dir)
+        return properties_match, run_dover(mode, distorted, output_dir)
     elif mode in MODES['cover']:
-        return properties_match, run_cover(reference, distorted, mode, output_dir)
+        return properties_match, run_cover(mode, distorted, output_dir)
     elif mode in MODES['uvq']:
-        return properties_match, run_uvq(distorted, mode, output_dir)
+        return properties_match, run_uvq(mode, distorted, output_dir)
     elif mode in MODES['maxvqa']:
-        return properties_match, run_maxvqa(reference, distorted, mode, output_dir)
+        return properties_match, run_maxvqa(mode, distorted, reference, output_dir)
     elif mode in MODES['pyiqa']:
-        return properties_match, run_pyiqa(reference, distorted, mode, output_dir)
+        return properties_match, run_pyiqa(mode, distorted, reference, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
@@ -148,6 +145,8 @@ def main():
     parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
     parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Enable quiet output')
     args = parser.parse_args()
+
+    set_quiet_mode(args.quiet)
 
     print_separator("STARTING VQCHECK")
 
@@ -168,10 +167,10 @@ def main():
         print_key_value("Reference", f"{args.reference} ({len(reference_files)})")
 
     if args.mode in FR_MODES and not args.reference:
-        print("ERROR: Reference video is required for the selected mode")
+        print_line("ERROR: Reference video is required for the selected mode", force=True)
         return
 
-    # just prin
+    # just print
     if args.output:
         if args.output == '.':
             print_key_value("Output", "(same as distorted files)")
@@ -198,7 +197,7 @@ def main():
             reference = find_reference_file(distorted, reference_files)
 
         if not reference and args.mode in FR_MODES:
-            print(f"ERROR: No reference file found for {distorted}")
+            print_line(f"ERROR: No reference file found for {distorted}", force=True)
             continue
         
         output_dir = None
@@ -209,11 +208,13 @@ def main():
                 output_dir = args.output
 
         print_separator(f"VQCheck ({args.mode})", newline=True)
-        print_key_value("Distorted", distorted)
+        print_key_value("Distorted", distorted, force=True)
         if reference:
             print_key_value("Reference", reference)
-        properties_match, results = run_analysis(args.mode, distorted, reference, output_dir, verbose=not args.quiet)
-        print_separator("SKIPPED (property mismatch)" if not properties_match else "")
+        properties_match, results = run_analysis(args.mode, distorted, reference, output_dir)
+        if not properties_match:
+            print_line("SKIPPED (property mismatch)", force=True)
+        print_separator()
 
         if properties_match:
             matching_properties += 1

@@ -194,7 +194,6 @@ def video_processing_multi_scale(ref, dist):
 def run_compressed_vqa_fr(ref, dist, output, multiscale=False, is_gpu=False):
 
     device = torch.device('cuda' if is_gpu else 'cpu')
-    # print('using ' + str(device))
 
     model = UGCVQA_FR_model.ResNet50()
     model = torch.nn.DataParallel(model)
@@ -202,7 +201,6 @@ def run_compressed_vqa_fr(ref, dist, output, multiscale=False, is_gpu=False):
     model.load_state_dict(torch.load(model_path, map_location=device))
     
     if not multiscale:
-        # print('using the single scale method')
         video_ref, video_dist, video_name = video_processing(ref, dist)
 
         with torch.no_grad():
@@ -219,7 +217,6 @@ def run_compressed_vqa_fr(ref, dist, output, multiscale=False, is_gpu=False):
             y_val = outputs.item()
 
     else: # multiscale
-        # print('using the multi scale method')
         video_ref1, video_dist1, video_ref2, video_dist2, video_ref3, video_dist3, video_name = video_processing_multi_scale(ref, dist)
 
         with torch.no_grad():

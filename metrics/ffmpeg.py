@@ -4,16 +4,16 @@ import subprocess
 from datetime import datetime
 import json
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line
 
 
-def run_ffmpeg(reference, distorted, mode, output_dir=None, verbose=True):
+def run_ffmpeg(mode, distorted, reference, output_dir=None):
 
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
         
         if os.path.exists(output_file) and not __name__ == "__main__":
-            print(f"{output_file} exists already - SKIPPING!")
+            print_line(f"{output_file} exists already - SKIPPING!", force=True)
             return None
         
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -32,7 +32,7 @@ def run_ffmpeg(reference, distorted, mode, output_dir=None, verbose=True):
     start_time = datetime.now()
 
     try:
-        print("\nRESULTS")
+        print_line("\nRESULTS")
         print_key_value("Start Time", ts(start_time))
         subprocess.run(cmd, capture_output=True, text=True, check=True)
         end_time = datetime.now()
@@ -49,30 +49,26 @@ def run_ffmpeg(reference, distorted, mode, output_dir=None, verbose=True):
                 print_key_value("PSNR Y", f"{pooled['psnr_y']['mean']:.2f} dB")
                 print_key_value("PSNR U", f"{pooled['psnr_u']['mean']:.2f} dB")
                 print_key_value("PSNR V", f"{pooled['psnr_v']['mean']:.2f} dB")
-                print_key_value("PSNR Avg", f"{pooled['psnr_avg']['mean']:.2f} dB")
+                print_key_value("PSNR Avg", f"{pooled['psnr_avg']['mean']:.2f} dB", force=True)
                 print_key_value("MSE Avg", f"{pooled['mse_avg']['mean']:.2f}")
                 
                 if output_dir is not None:
                     final_output_file = get_output_filename(distorted, mode, output_dir)
                     save_json(psnr_data, final_output_file)
-                    print(f"\nResults saved to: {final_output_file}")
                 
                 results = {'psnr_avg': pooled['psnr_avg']['mean']}
         else: # VMAF
             results = parse_vmaf_results(output_file)
             if results:
-                print_key_value("VMAF", f"{results['vmaf']:.2f}")
+                print_key_value("VMAF", f"{results['vmaf']:.2f}", force=True)
                 if 'neg' in mode:
-                    print_key_value("VMAF (neg)", f"{results['vmaf_neg']:.2f}")
-                print_key_value("PSNR", f"{results['psnr']:.2f} dB")
+                    print_key_value("VMAF (neg)", f"{results['vmaf_neg']:.2f}", force=True)
+                print_key_value("PSNR", f"{results['psnr']:.2f} dB", force=True)
                 print_key_value("PSNR Y", f"{results['psnr_y']:.2f} dB")
                 print_key_value("PSNR CB", f"{results['psnr_cb']:.2f} dB")
                 print_key_value("PSNR CR", f"{results['psnr_cr']:.2f} dB")
-                print_key_value("SSIM", f"{results['ssim']:.4f}")
-                print_key_value("MS-SSIM", f"{results['ms_ssim']:.4f}")
-                
-                if output_dir is not None:
-                    print(f"\nResults saved to: {output_file}")
+                print_key_value("SSIM", f"{results['ssim']:.4f}", force=True)
+                print_key_value("MS-SSIM", f"{results['ms_ssim']:.4f}", force=True)
 
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)
@@ -80,8 +76,8 @@ def run_ffmpeg(reference, distorted, mode, output_dir=None, verbose=True):
         return results
 
     except Exception as e:
-        print(" ".join(cmd))
-        print(e)
+        print_line(" ".join(cmd), force=True)
+        print_line(str(e), force=True)
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)
         return None
@@ -132,7 +128,7 @@ def parse_vmaf_results(output_file):
             'ms_ssim': ms_ssim_score
         }
     except Exception as e:
-        print(f"Error parsing VMAF results: {e}")
+        print_line(f"Error parsing VMAF results: {e}", force=True)
         return None
 
 
@@ -190,5 +186,5 @@ def parse_psnr_results(temp_output_file):
         }
         
     except Exception as e:
-        print(f"Error parsing PSNR results: {e}")
+        print_line(f"Error parsing PSNR results: {e}", force=True)
         return None

@@ -11,25 +11,25 @@ from datetime import datetime
 import contextlib
 import torch 
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line
 
 
 def extract_frames(video_path, output_dir):
     cmd = ['ffmpeg', '-i', video_path, '-y', os.path.join(output_dir, 'frame_%06d.png')]
     subprocess.run(cmd, check=True, capture_output=True)
 
-def run_lpips(reference, distorted, mode, output_dir=None, verbose=True, net='alex', version='0.1'):
+def run_lpips(mode, distorted, reference, output_dir=None, net='alex', version='0.1'):
 
     output_file = None
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
         if os.path.exists(output_file):
-            print(f"{output_file} exists already - SKIPPING!")
+            print_line(f"{output_file} exists already - SKIPPING!", force=True)
             return None
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
     start_time = datetime.now()
-    print("\nRESULTS")
+    print_line("\nRESULTS")
     print_key_value("Start Time", ts(start_time))
 
     # Suppress LPIPS setup messages
@@ -86,6 +86,6 @@ def run_lpips(reference, distorted, mode, output_dir=None, verbose=True, net='al
         
     if output_file is not None:
         save_json(results, output_file)
-    
-    print_key_value("LPIPS", "{:.4f}".format(results["metadata"]["mean_distance"]))
-    return results 
+
+    print_key_value("LPIPS", "{:.4f}".format(results["metadata"]["mean_distance"]), force=True)
+    return results

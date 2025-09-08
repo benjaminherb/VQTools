@@ -4,26 +4,26 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info, print_line
 
 
 def check_uvq():
     """Check if UVQ repository exists and is properly set up."""
     repo_path = Path(__file__).parent / "uvq"
     if not repo_path.exists():
-        print("Cloning UVQ repository...")
+        print_line("Cloning UVQ repository...", force=True)
         try:
             result = subprocess.run(['git', 'clone', 'https://github.com/google/uvq.git', str(repo_path)], check=True)
             if result.returncode != 0:
-                print(f"ERROR: Failed to clone UVQ repository: {result.stderr}")
+                print_line(f"ERROR: Failed to clone UVQ repository: {result.stderr}", force=True)
                 return False
         except subprocess.CalledProcessError as e:
-            print(f"ERROR: Failed to clone UVQ repository: {e}")
+            print_line(f"ERROR: Failed to clone UVQ repository: {e}", force=True)
             return False
     return True
 
 
-def run_uvq(distorted, mode, output_dir=None):
+def run_uvq(mode, distorted, output_dir=None):
     """Run UVQ video quality assessment."""
     
     # Prepare output file
@@ -31,12 +31,12 @@ def run_uvq(distorted, mode, output_dir=None):
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
         if os.path.exists(output_file):
-            print(f"{output_file} exists already - SKIPPING!")
+            print_line(f"{output_file} exists already - SKIPPING!", force=True)
             return None
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
     
     start_time = datetime.now()
-    print("\nRESULTS")
+    print_line("\nRESULTS")
     print_key_value("Start Time", ts(start_time))
     
     try:
@@ -58,7 +58,7 @@ def run_uvq(distorted, mode, output_dir=None):
             result = subprocess.run(cmd, capture_output=True, text=True, cwd=uvq_work_dir)
             
             if result.returncode != 0:
-                print(f"ERROR: UVQ evaluation failed: {result.stderr}")
+                print_line(f"ERROR: UVQ evaluation failed: {result.stderr}", force=True)
                 return None
             
             results = _parse_uvq_results(uvq_output_dir, distorted)
@@ -69,7 +69,7 @@ def run_uvq(distorted, mode, output_dir=None):
             print_key_value("End Time", ts(end_time))
             print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
             if results:
-                print_key_value("UVQ Score", f"{results['compression_content_distortion']:.4f}")
+                print_key_value("UVQ Score", f"{results['compression_content_distortion']:.4f}", force=True)
                 print_key_value("Compression", f"{results['compression']:.4f}")
                 print_key_value("Content", f"{results['content']:.4f}")
                 print_key_value("Distortion", f"{results['distortion']:.4f}")
@@ -84,34 +84,8 @@ def run_uvq(distorted, mode, output_dir=None):
             return results
             
     except Exception as e:
-        print(f"ERROR: UVQ evaluation failed: {e}")
+        print_line(f"ERROR: UVQ evaluation failed: {e}", force=True)
         return None
-
-
-def _get_video_info(video_path):
-    """Get video information needed for UVQ input format."""
-    import cv2
-    
-    try:
-        cap = cv2.VideoCapture(video_path)
-        if not cap.isOpened():
-            return None
-            
-        fps = cap.get(cv2.CAP_PROP_FPS)
-        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        duration_seconds = frame_count / fps if fps > 0 else 0
-        
-        cap.release()
-        
-        return {
-            'duration_seconds': duration_seconds,
-            'duration_frames': frame_count,
-            'fps': fps
-        }
-    except Exception as e:
-        print(f"ERROR: Could not get video info: {e}")
-        return None
-
 
 def _parse_uvq_results(output_dir, video_path):
     """Parse UVQ results from output directory."""
@@ -134,6 +108,6 @@ def _parse_uvq_results(output_dir, video_path):
         scores['timestamp'] = ts(datetime.now())
         return scores    
     except Exception as e:
-        print(f"ERROR: Could not parse UVQ results: {e}")
-    
+        print_line(f"ERROR: Could not parse UVQ results: {e}", force=True)
+
     return None
