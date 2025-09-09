@@ -6,7 +6,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator
 
 
 MODEL_FILES = [
@@ -18,43 +18,42 @@ MODEL_FILES = [
 def check_fastvqa():
     """Clone the FAST-VQA repo if missing and download pretrained weights if needed. """
 
-    repo = Path(__file__).parent / "FAST-VQA-and-FasterVQA"
+    repo = Path(__file__).parent / "fastvqa"
     if not repo.exists():
+        print_separator("BUILDING FAST-VQA", newline=True)
         print_line("Cloning FAST-VQA repository...", force=True)
         try:
-            subprocess.run(['git', 'clone', 'https://github.com/VQAssessment/FAST-VQA-and-FasterVQA', str(repo)], check=True)
+            subprocess.run(['git', 'clone', 'https://github.com/VQAssessment/FAST-VQA-and-FasterVQA', str(repo)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             print_line(f"ERROR: Failed to clone FastVQA repository: {e}", force=True)
             return False
 
-    weights_dir = repo / "pretrained_weights"
-    weights_dir.mkdir(parents=True, exist_ok=True)
+        weights_dir = repo / "pretrained_weights"
+        weights_dir.mkdir(parents=True, exist_ok=True)
 
-    try:
-        for name, url in MODEL_FILES:
-            dest = weights_dir / name
-            if dest.exists():
-                continue
-            print_line(f"Downloading {name}...")
-            urllib.request.urlretrieve(url, str(dest))
+        try:
+            for name, url in MODEL_FILES:
+                dest = weights_dir / name
+                if dest.exists():
+                    continue
+                print_line(f"Downloading {name}...")
+                urllib.request.urlretrieve(url, str(dest))
 
-            # create fallback symlinks for patterns like 1_4 -> 1*4 and 1_1 -> 1*1 (to avoid issues with unexpanded shell globbing)
-            try: 
-                for pat in ("1_4.pth", "1_1.pth"):
-                    if not pat in name:
-                        continue
+                # create fallback symlinks for patterns like 1_4 -> 1*4 and 1_1 -> 1*1 (to avoid issues with unexpanded shell globbing)
+                try: 
+                    for pat in ("1_4.pth", "1_1.pth"):
+                        if not pat in name:
+                            continue
 
-                    alt_name = name.replace(pat, pat.replace("_", "*"))
-                    alt_path = weights_dir / alt_name
-                    print(f"Creating fallback symlink {alt_path} -> {dest.name}")
-                    if not alt_path.exists():
-                        print(f"Creating fallback symlink {alt_path} -> {dest.name}")
-                        os.symlink(dest.name, str(alt_path))
-            except Exception:
-                pass
-    except Exception as e:
-        print_line(f"ERROR: Failed to download pretrained models: {e}", force=True)
-        return False
+                        alt_name = name.replace(pat, pat.replace("_", "*"))
+                        alt_path = weights_dir / alt_name
+                        if not alt_path.exists():
+                            os.symlink(dest.name, str(alt_path))
+                except Exception:
+                    pass
+        except Exception as e:
+            print_line(f"ERROR: Failed to download pretrained models: {e}", force=True)
+            return False
 
     return True
 
@@ -77,7 +76,7 @@ def run_fastvqa(mode, distorted, output_dir=None):
     
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            work_dir = Path(__file__).parent / "FAST-VQA-and-FasterVQA"
+            work_dir = Path(__file__).parent / "fastvqa"
 
             if mode == 'fastvqa':
                 mode_string = "FAST-VQA"
