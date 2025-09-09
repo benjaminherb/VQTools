@@ -9,7 +9,6 @@ import re
 import numpy as np
 from datetime import datetime
 import contextlib
-import torch 
 
 from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line
 

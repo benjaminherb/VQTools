@@ -1,5 +1,6 @@
 import os
 import json
+from pathlib import Path
 import subprocess
 from datetime import datetime
 import cv2
@@ -14,7 +15,6 @@ def get_frame_count_cv2(video_path):
     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     return frame_count
-
 
 
 def get_video_info(video_path):
@@ -66,6 +66,48 @@ def get_video_info(video_path):
     except json.JSONDecodeError as e:
         print_line(f"Error parsing ffprobe output for {video_path}: {e}", force=True)
         return None
+
+
+## ------ Virtual Environment ------ ##
+
+
+def create_venv(venv_path, python='python3.12', requirements=None, compile_decord=True):
+    """Create a virtual environment at the specified path."""
+    try:
+        subprocess.run([python, '-m', 'venv', venv_path], check=True)
+
+        if compile_decord:
+            decord_dir =  Path(__file__).parent.parent / 'decord' / 'python'
+            run_in_venv(venv_path, ['python', 'setup.py', 'install'], work_dir=str(decord_dir))
+            # decord_lib = Path(venv_path) / 'decord' /  'libdecord.dylib'
+            # target_dir = Path(venv_path) / 'lib' / python / 'site-packages' / 'decord'
+            # subprocess.run(['cp', str(decord_lib), str(target_dir)], check=True)
+
+        if requirements:
+            pip_path = os.path.join(venv_path, 'bin', 'pip')
+            run_in_venv(venv_path, [pip_path, 'install', '-r', requirements])
+        return True
+    except subprocess.CalledProcessError as e:
+        print_line(f"ERROR: Failed to create virtual environment: {e}", force=True)
+        return False
+
+
+def run_in_venv(venv_path, command, work_dir=None):
+    """Run a command inside the specified virtual environment."""
+    if work_dir is None:
+        work_dir = os.getcwd()
+    
+    env = os.environ.copy()
+    env['VIRTUAL_ENV'] = venv_path
+    env['PATH'] = f"{os.path.join(venv_path, 'bin')}:{env.get('PATH', '')}"
+    
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, cwd=str(work_dir), env=env)
+        return result
+    except Exception as e:
+        print_line(f"ERROR: Failed to run command in venv: {e}", force=True)
+        return None
+
 
 ## ------ Docker ------ ##
 
@@ -200,6 +242,8 @@ def format_file_size(size_bytes):
 
 
 ## ------ Print ------ ##
+
+
 _quiet_mode = False
 
 
@@ -268,6 +312,7 @@ def ts(time=None):
 
 ## ------ PyTorch ------ ##
 
+
 def get_device():
     """Get the appropriate device for computation."""
     if torch.cuda.is_available():
@@ -278,3 +323,121 @@ def get_device():
         return torch.device('metal')
     else:
         return torch.device('cpu')
+
+
+## ------ File Modification ------ ##
+
+
+def _read_file_lines(filepath):
+    """Read file and return list of lines."""
+    try:
+        with open(filepath, 'r') as f:
+            return f.readlines()
+    except Exception as e:
+        print_line(f"Error reading {filepath}: {e}", force=True)
+        return None
+
+def _write_file_lines(filepath, lines):
+    """Write list of lines to file."""
+    try:
+        with open(filepath, 'w') as f:
+            f.writelines(lines)
+        return True
+    except Exception as e:
+        print_line(f"Error writing {filepath}: {e}", force=True)
+        return False
+
+def _normalize_content(content):
+    """Normalize content to list of lines with proper newlines."""
+    if isinstance(content, str):
+        content = [content]
+    
+    normalized = []
+    for line in content:
+        if not line.endswith('\n'):
+            line += '\n'
+        normalized.append(line)
+    return normalized
+
+def _find_pattern_line(lines, pattern):
+    """Find first line index containing pattern."""
+    for i, line in enumerate(lines):
+        if pattern in line:
+            return i
+    return None
+
+def modify_file(filepath, modifications):
+    """
+    Universal file modification function.
+    
+    Supported operations:
+        {'action': 'replace', 'line': 10, 'content': 'new line'}  # 0-indexed
+        {'action': 'replace', 'pattern': 'text', 'content': 'new line'}  
+        {'action': 'insert', 'line': 12, 'content': ['line1', 'line2']}  # 0-indexed
+        {'action': 'delete', 'from': 5, 'to': 8}  # from/to can be line numbers or patterns, use -1 for end
+    """
+    lines = _read_file_lines(filepath)
+    if lines is None:
+        return False
+    
+    def resolve_line_number(value, lines):
+        if isinstance(value, str):
+            return _find_pattern_line(lines, value)
+        elif value == -1:
+            return len(lines) - 1  
+        else:
+            return value
+    
+    sorted_mods = []
+    for mod in modifications:
+        if mod['action'] == 'replace' and 'pattern' in mod:
+            line_idx = _find_pattern_line(lines, mod['pattern'])
+            if line_idx is not None:
+                sorted_mods.append((line_idx, mod))
+        elif mod['action'] == 'insert' and 'pattern' in mod:
+            line_idx = _find_pattern_line(lines, mod['pattern'])
+            if line_idx is not None:
+                sorted_mods.append((line_idx, mod))
+        elif mod['action'] == 'delete':
+            from_line = resolve_line_number(mod['from'], lines)
+            if from_line is not None:
+                sorted_mods.append((from_line, mod))
+        elif 'line' in mod:
+            sorted_mods.append((mod['line'], mod))  # Keep 0-based
+    
+    sorted_mods.sort(key=lambda x: x[0], reverse=True)
+    
+    try:
+        for line_idx, mod in sorted_mods:
+            action = mod['action']
+            
+            if action == 'replace':
+                if 'content' in mod:
+                    if 'pattern' in mod:
+                        # Replace pattern within the line, not the whole line
+                        lines[line_idx] = lines[line_idx].replace(mod['pattern'], mod['content'])
+                    else:
+                        # Replace entire line
+                        content = _normalize_content(mod['content'])
+                        lines[line_idx:line_idx+1] = content
+                    
+            elif action == 'insert':
+                if 'content' in mod:
+                    content = _normalize_content(mod['content'])
+                    lines[line_idx+1:line_idx+1] = content
+                    
+            elif action == 'delete':
+                from_line = resolve_line_number(mod['from'], lines)
+                to_line = resolve_line_number(mod.get('to', mod['from']), lines)
+                
+                if from_line is not None and to_line is not None:
+                    if mod.get('to') == -1:
+                        del lines[from_line:]
+                    else:
+                        del lines[from_line:to_line+1]
+        
+        return _write_file_lines(filepath, lines)
+        
+    except Exception as e:
+        print_line(f"Error applying modifications to {filepath}: {e}", force=True)
+        return False

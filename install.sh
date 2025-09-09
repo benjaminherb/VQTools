@@ -53,7 +53,7 @@ fi
 
 if ! pip show decord &> /dev/null; then
     echo "Building decord..."
-    cd /tmp
+    cd "${SHARE_DIR}"
     export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH"
     git clone --recursive https://github.com/dmlc/decord 
     cd decord
@@ -70,12 +70,10 @@ if ! pip show decord &> /dev/null; then
     cd ../python
     python setup.py install
     
-    BUILD_LIB="/tmp/decord/build/libdecord.dylib"
+    BUILD_LIB="${SHARE_DIR}/decord/build/libdecord.dylib"
     PKG_DIR=$(python -c "import decord; import os; print(os.path.dirname(decord.__file__))" 2>/dev/null)
     cp "$BUILD_LIB" "$PKG_DIR/"
     cp ${SHARE_DIR}/vqenv/decord/libdecord.dylib "${SHARE_DIR}/vqenv/lib/python3.12/site-packages/decord/"
-    cd /tmp
-    rm -rf decord
 fi
 
 cd "$SHARE_DIR"
