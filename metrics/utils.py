@@ -397,9 +397,14 @@ def modify_file(filepath, modifications):
     sorted_mods = []
     for mod in modifications:
         if mod['action'] == 'replace' and 'pattern' in mod:
-            line_idx = _find_pattern_line(lines, mod['pattern'])
-            if line_idx is not None:
-                sorted_mods.append((line_idx, mod))
+            matching_lines = []
+            for i, line in enumerate(lines):
+                if mod['pattern'] in line:
+                    matching_lines.append(i)
+            
+            if matching_lines:
+                for line_idx in matching_lines:
+                    sorted_mods.append((line_idx, mod))
         elif mod['action'] == 'insert' and 'pattern' in mod:
             line_idx = _find_pattern_line(lines, mod['pattern'])
             if line_idx is not None:
