@@ -6,7 +6,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device
 
 
 MODEL_FILES = [
@@ -85,12 +85,12 @@ def run_fastvqa(mode, distorted, output_dir=None):
                 mode_string = "FasterVQA"
             else:
                 return
-
+            device = get_device()
             cmd = [
                 'python3', str(work_dir / "vqa.py"),
                 '-m', mode_string,
                 '-v', os.path.abspath(distorted),
-                '-d', 'cpu',
+                '-d', str(device),
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
 
