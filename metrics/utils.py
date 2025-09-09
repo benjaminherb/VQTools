@@ -74,7 +74,10 @@ def get_video_info(video_path):
 def create_venv(venv_path, python='python3.12', requirements=None, compile_decord=True):
     """Create a virtual environment at the specified path."""
     try:
-        subprocess.run([python, '-m', 'venv', venv_path], check=True)
+        result = subprocess.run([python, '-m', 'venv', venv_path], check=True)
+        if result.returncode != 0:
+            print_line(f"ERROR: Failed to create virtual environment at {venv_path}", force=True)
+            return False
 
         if compile_decord:
             decord_dir =  Path(__file__).parent.parent / 'decord' / 'python'
@@ -85,7 +88,10 @@ def create_venv(venv_path, python='python3.12', requirements=None, compile_decor
 
         if requirements:
             pip_path = os.path.join(venv_path, 'bin', 'pip')
-            run_in_venv(venv_path, [pip_path, 'install', '-r', requirements])
+            result = run_in_venv(venv_path, [pip_path, 'install', '-r', requirements])
+            if result.returncode != 0:
+                print_line(f"ERROR: Failed to install requirements: {result.stderr}", force=True)
+                return False
         return True
     except subprocess.CalledProcessError as e:
         print_line(f"ERROR: Failed to create virtual environment: {e}", force=True)

@@ -4,19 +4,25 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info, print_line
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info, print_line, print_separator, create_venv, run_in_venv
 
 
 def check_uvq():
     """Check if UVQ repository exists and is properly set up."""
     repo_path = Path(__file__).parent / "uvq"
+    venv_path = repo_path / "venv"
+    
     if not repo_path.exists():
-        print_line("Cloning UVQ repository...", force=True)
+        print_separator("BUILDING UVQ", newline=True)
+        print_line("Cloning UVQ repository...")
         try:
-            result = subprocess.run(['git', 'clone', 'https://github.com/google/uvq.git', str(repo_path)], check=True)
+            result = subprocess.run(['git', 'clone', 'https://github.com/google/uvq.git', str(repo_path)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
             if result.returncode != 0:
                 print_line(f"ERROR: Failed to clone UVQ repository: {result.stderr}", force=True)
                 return False
+            print_line("Setting up UVQ virtual environment...")
+            create_venv(str(venv_path), 'python3.12', requirements=str(repo_path / "requirements.txt")) 
+
         except subprocess.CalledProcessError as e:
             print_line(f"ERROR: Failed to clone UVQ repository: {e}", force=True)
             return False
@@ -48,15 +54,15 @@ def run_uvq(mode, distorted, output_dir=None):
             uvq_work_dir = Path(__file__).parent / "uvq"
             
             cmd = [
-                'python3', str(uvq_work_dir / "uvq_main.py"),
+                'python', str(uvq_work_dir / "uvq_main.py"),
                 f'--input_files={video_id},{video_length},{os.path.abspath(distorted)}',
                 f'--output_dir={uvq_output_dir}',
                 f'--model_dir={str(uvq_work_dir / "models")}',
                 '--transpose=False'
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=uvq_work_dir)
-            
+            result = run_in_venv(str(uvq_work_dir / 'venv'), cmd, work_dir=str(uvq_work_dir))
+
             if result.returncode != 0:
                 print_line(f"ERROR: UVQ evaluation failed: {result.stderr}", force=True)
                 return None
