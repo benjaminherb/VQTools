@@ -12,7 +12,7 @@ MODEL_FILES = [
 ]
 
 def check_cover():
-    """Check if Docker and COVER image are available."""
+    """Check if COVER is available."""
     
     repo = Path(__file__).parent / "cover"
     if not repo.exists():
