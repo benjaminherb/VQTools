@@ -5,7 +5,7 @@ import urllib
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line, create_venv, run_in_venv, print_separator, modify_file
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line, create_venv, run_in_venv, print_separator, modify_file, get_device
 
 MODEL_FILES = [
     ("COVER.pth", "https://github.com/vztu/COVER/raw/release/Model/COVER.pth"),
@@ -30,7 +30,14 @@ def check_cover():
                     'np.random.seed(42)',
                     'random.seed(42)'
                 ]},
-                {'action': 'replace', 'pattern': 'torch.cuda.current_device()', 'content': ''},])
+                {'action': 'replace', 'pattern': 'torch.cuda.current_device()', 'content': ''},
+                # Add device argument parser after line 36 (after other argument definitions)
+                {'action': 'insert', 'line': 36, 'content': [
+                    '    parser.add_argument("-d", "--device", type=str, default="cpu", help="Device to use (cpu, cuda, mps)")',
+                ]},
+                # Replace device detection with argument
+                {'action': 'replace', 'pattern': 'device = torch.device("cuda" if torch.cuda.is_available() else "cpu")', 'content': 'device = torch.device(args.device)'}
+            ])
             # handle mkv and mov files
             modify_file(str(repo / 'cover' / 'datasets' / 'cover_datasets.py'), [
                 {'action': 'replace', 'pattern': 'elif video_path.endswith(".mp4"):', 'content': 'elif video_path.endswith((".mp4", ".mkv", ".mov")):'}
@@ -86,9 +93,12 @@ def run_cover(mode, distorted, output_dir=None):
     
     try:
         repo_dir = Path(__file__).parent / "cover"
+        device = get_device()
+        device = "cpu" if device.type == "mps" else device  # COVER does not support mps
         cmd = [
             'python', str(repo_dir / 'evaluate_one_video.py'),
             '-v', distorted,
+            '-d', str(device),
         ]
         result = run_in_venv(str(repo_dir / 'venv'), cmd, work_dir=str(repo_dir))
         
@@ -96,7 +106,6 @@ def run_cover(mode, distorted, output_dir=None):
             print_line(f"ERROR: COVER evaluation failed: {result.stderr}", force=True)
             return None
         
-        # Parse results from evaluate_one_video output
         results = _parse_results(result.stdout, result.stderr, distorted)
         
         end_time = datetime.now()
