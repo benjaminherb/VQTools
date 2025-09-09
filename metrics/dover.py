@@ -73,7 +73,7 @@ def check_dover():
     
     if not (repo / 'venv').exists():
         print_line("Creating DOVER virtual environment...")
-        create_venv(str(repo / 'venv'), python='python3.8', requirements=str(repo / 'requirements.txt'))
+        create_venv(str(repo / 'venv'), python='python3.8', requirements=str(repo / 'requirements.txt'), compile_decord=True)
         run_in_venv(str(repo / 'venv'), ['pip', 'install', '-e', str(repo)])
 
     return True
