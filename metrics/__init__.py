@@ -6,3 +6,4 @@ from metrics.cover.cover import run_cover, check_cover
 from metrics.uvq.uvq import run_uvq, check_uvq
 from metrics.maxvqa.maxvqa import run_maxvqa, check_maxvqa
 from metrics.pyiqa import run_pyiqa, check_pyiqa
+from metrics.fastvqa.fastvqa import run_fastvqa, check_fastvqa

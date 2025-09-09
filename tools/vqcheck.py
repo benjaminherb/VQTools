@@ -5,7 +5,7 @@ import os
 import argparse
 import cv2
 import json
-from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa, run_uvq, check_uvq, run_maxvqa, check_maxvqa, run_pyiqa, check_pyiqa
+from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa, run_uvq, check_uvq, run_maxvqa, check_maxvqa, run_pyiqa, check_pyiqa, run_fastvqa, check_fastvqa
 from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet_mode, print_line
 
 MODES = {
@@ -17,10 +17,11 @@ MODES = {
     'uvq': ['uvq'],
     'maxvqa': ['maxvqa'],
     'pyiqa': ['musiq', 'qalign'],
+    'fastvqa': ['fastvqa', 'fastervqa'],
     'check': ['check']
 }
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-fr', 'cvqa-fr-ms', 'lpips']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
 
@@ -47,6 +48,10 @@ def check_model_availability(mode):
 
     if mode in MODES['pyiqa']:
         if not check_pyiqa(mode):
+            return False
+    
+    if mode in MODES['fastvqa']:
+        if not check_fastvqa():
             return False
 
     return True
@@ -132,6 +137,8 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
         return properties_match, run_maxvqa(mode, distorted, reference, output_dir)
     elif mode in MODES['pyiqa']:
         return properties_match, run_pyiqa(mode, distorted, reference, output_dir)
+    elif mode in MODES['fastvqa']:
+        return properties_match, run_fastvqa(mode, distorted, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
