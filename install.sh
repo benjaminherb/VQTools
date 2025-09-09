@@ -39,14 +39,46 @@ cd "$SHARE_DIR"
 # Check if venv exists
 if [ ! -d "vqenv" ]; then
     echo "# Creating virtual environment and installing requirements"
-    python3 -m venv vqenv
+    python3.12 -m venv vqenv
     source vqenv/bin/activate
     pip install -r requirements.txt
+
+
 else
     echo "# Virtual environment already exists, activating"
     source vqenv/bin/activate
     pip install -r requirements.txt
 fi
+
+
+if ! pip show decord &> /dev/null; then
+    echo "Building decord..."
+    cd /tmp
+    export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH"
+    git clone --recursive https://github.com/dmlc/decord 
+    cd decord
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+      echo "Using MacOS specific fix"
+      git fetch origin pull/353/head:mac
+      git checkout mac
+      sed -i '' '/\/\/set(CMAKE_CUDA_FLAGS/d' CMakeLists.txt
+    fi
+    mkdir build
+    cd build
+    cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_AUDIO=OFF -DCMAKE_CXX_STANDARD=11
+    make
+    cd ../python
+    python setup.py install
+    
+    BUILD_LIB="/tmp/decord/build/libdecord.dylib"
+    PKG_DIR=$(python -c "import decord; import os; print(os.path.dirname(decord.__file__))" 2>/dev/null)
+    cp "$BUILD_LIB" "$PKG_DIR/"
+    cp ${SHARE_DIR}/vqenv/decord/libdecord.dylib "${SHARE_DIR}/vqenv/lib/python3.12/site-packages/decord/"
+    cd /tmp
+    rm -rf decord
+fi
+
+cd "$SHARE_DIR"
 
 TOOLS=($(ls tools/*.py 2>/dev/null))
 
