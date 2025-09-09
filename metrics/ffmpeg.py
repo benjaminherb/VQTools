@@ -43,7 +43,7 @@ def run_ffmpeg(mode, distorted, reference, output_dir=None):
 
         results = None
         if 'psnr' in mode:
-            psnr_data = parse_psnr_results(output_file)
+            psnr_data = parse_psnr_results(output_file, distorted, reference)
             if psnr_data:
                 pooled = psnr_data['pooled_metrics']
                 print_key_value("PSNR Y", f"{pooled['psnr_y']['mean']:.2f} dB")
@@ -58,7 +58,7 @@ def run_ffmpeg(mode, distorted, reference, output_dir=None):
                 
                 results = {'psnr_avg': pooled['psnr_avg']['mean']}
         else: # VMAF
-            results = parse_vmaf_results(output_file)
+            results = parse_vmaf_results(output_file, distorted, reference)
             if results:
                 print_key_value("VMAF", f"{results['vmaf']:.2f}", force=True)
                 if 'neg' in mode:
@@ -103,7 +103,7 @@ def get_lavfi(mode, output_file):
     return lavfi
 
 
-def parse_vmaf_results(output_file):
+def parse_vmaf_results(output_file, distorted=None, reference=None):
     try:
         with open(output_file, 'r') as f:
             data = json.load(f)
@@ -118,6 +118,9 @@ def parse_vmaf_results(output_file):
         ms_ssim_score = pooled_metrics.get('float_ms_ssim', {}).get('mean', 0)
         
         return {
+            'timestamp': ts(),
+            'distorted': os.path.basename(distorted),
+            'reference': os.path.basename(reference),
             'vmaf': vmaf_score,
             'vmaf_neg': vmaf_neg_score,
             'psnr': (6*psnr_y_score+psnr_cb_score+psnr_cr_score)/8,
@@ -132,7 +135,7 @@ def parse_vmaf_results(output_file):
         return None
 
 
-def parse_psnr_results(temp_output_file):
+def parse_psnr_results(temp_output_file, distorted=None, reference=None):
     try:
         with open(temp_output_file, 'r') as f:
             lines = f.readlines()
@@ -181,6 +184,9 @@ def parse_psnr_results(temp_output_file):
         }
         
         return {
+            'timestamp': ts(),
+            'distorted': os.path.basename(distorted) if distorted else None,
+            'reference': os.path.basename(reference) if reference else None,
             'frames': frame_data,
             'pooled_metrics': pooled_metrics
         }

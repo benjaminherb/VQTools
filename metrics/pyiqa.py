@@ -108,15 +108,15 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
         print_key_value("Max Score", f"{max_score:.4f}")
         
         results = {
-            'overall_score': mean_score,
+            'timestamp': ts(),
+            'distorted': os.path.basename(distorted),
+            'reference': os.path.basename(reference) if reference else None,
+            'metric': mode,
             'mean_score': mean_score,
             'min_score': min_score,
             'max_score': max_score,
-            'frame_scores': frame_scores,
             'frames_processed': len(frame_scores),
-            'metric': mode,
-            'filename': os.path.basename(distorted),
-            'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            'frame_scores': frame_scores
         }
         
         if output_file.endswith('.json'):

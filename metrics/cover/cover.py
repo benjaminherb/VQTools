@@ -107,12 +107,12 @@ def _parse_results(stdout, stderr, video_path=None):
                     overall_score = float(parts[4])
                     
                     return {
+                        'timestamp': ts(),
+                        'distorted': os.path.basename(video_path) if video_path else filename,
                         'semantic_score': semantic_score,
                         'technical_score': technical_score,
                         'aesthetic_score': aesthetic_score,
-                        'fused_score': overall_score,
-                        'filename': os.path.basename(video_path) if video_path else filename,
-                        'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        'fused_score': overall_score
                     }
                 except (ValueError, IndexError):
                     continue

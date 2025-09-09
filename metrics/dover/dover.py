@@ -99,11 +99,11 @@ def _parse_dover_results_single(stdout, stderr, video_path=None):
         try:
             data = json.loads(json_match.group(1))
             return {
+                'timestamp': ts(),
+                'distorted': os.path.basename(video_path) if video_path else '',
                 'technical_score': data.get('technical_score'),
                 'aesthetic_score': data.get('aesthetic_score'),
-                'fused_score': data.get('fused_score'),
-                'filename': os.path.basename(video_path) if video_path else '',
-                'timestamp': datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                'fused_score': data.get('fused_score')
             }
         except (json.JSONDecodeError, KeyError):
             pass

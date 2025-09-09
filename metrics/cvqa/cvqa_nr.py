@@ -13,6 +13,8 @@ import warnings
 import numpy as np
 import torch
 import torch.nn
+
+from metrics.utils import ts
 from metrics.cvqa import UGCVQA_NR_model
 
 # Suppress torchvision deprecation warnings
@@ -232,12 +234,11 @@ def run_compressed_vqa_nr(dist, output, multiscale=False, is_gpu=False):
         os.system(r"touch {}".format(output))
 
     result = {
-        "name": os.path.splitext(os.path.basename(video_name))[0],
-        "distorted": os.path.basename(video_name),
+        "timestamp": ts(),
+        "distorted": os.path.basename(dist),
         "model": "UGCVQA_NR",
         "multiscale": multiscale,
-        "score": float(y_val),
-        "ts": str(datetime.now())
+        "score": float(y_val)
     }
     
     with open(output, 'w') as f:

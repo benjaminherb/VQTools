@@ -131,8 +131,8 @@ def _parse_fastvqa_results(stdout, video_path):
         sampled_frames = [int(x) for x in nums]
 
     results = {
-        "filename": os.path.basename(video_path),
         "timestamp": ts(),
+        "distorted": os.path.basename(video_path),
         "model": model,
         "sampled_frames": sampled_frames,
         "score": score

@@ -96,7 +96,11 @@ def _parse_uvq_results(output_dir, video_path):
         video_id = os.path.splitext(os.path.basename(video_path))[0]
         csv_file = os.path.join(output_dir, video_id, f"{video_id}_uvq.csv")
         
-        scores = {}
+        scores = {
+            'timestamp': ts(),
+            'distorted': os.path.basename(video_path)
+        }
+        
         with open(csv_file, 'r') as f:
             for row in csv.reader(f):
                 model_name = row[1]  # compression, content, distortion, etc.
@@ -104,8 +108,6 @@ def _parse_uvq_results(output_dir, video_path):
                 scores[model_name] = score
 
         scores['uvq'] = scores.get('compression_content_distortion', None)
-        scores['filename'] = os.path.basename(video_path)
-        scores['timestamp'] = ts(datetime.now())
         return scores    
     except Exception as e:
         print_line(f"ERROR: Could not parse UVQ results: {e}", force=True)

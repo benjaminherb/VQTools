@@ -49,15 +49,12 @@ def run_lpips(mode, distorted, reference, output_dir=None, net='alex', version='
         extract_frames(distorted, dist_dir)
         
         results = {
-            "metadata": {
-                "reference_video": os.path.basename(reference),
-                "distorted_video": os.path.basename(distorted),
-                "name": os.path.basename(distorted)[:-4],
-                "lpips_version": version,
-                "device": device,
-                "net": net,
-                "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-            },
+            "timestamp": ts(),
+            "distorted": os.path.basename(distorted),
+            "reference": os.path.basename(reference),
+            "lpips_version": version,
+            "device": device,
+            "net": net
         }
         
         files = sorted(os.listdir(ref_dir))
@@ -75,8 +72,8 @@ def run_lpips(mode, distorted, reference, output_dir=None, net='alex', version='
                 frame_distances.append(float(dist01.detach()))
         
         results["frame_distances"] = frame_distances
-        results["metadata"]["num_frames"] = len(frame_distances)
-        results["metadata"]["mean_distance"] = np.mean(frame_distances)
+        results["num_frames"] = len(frame_distances)
+        results["mean_distance"] = np.mean(frame_distances)
 
         end_time = datetime.now()
         analysis_duration = end_time - start_time
@@ -87,5 +84,5 @@ def run_lpips(mode, distorted, reference, output_dir=None, net='alex', version='
     if output_file is not None:
         save_json(results, output_file)
 
-    print_key_value("LPIPS", "{:.4f}".format(results["metadata"]["mean_distance"]), force=True)
+    print_key_value("LPIPS", "{:.4f}".format(results["mean_distance"]), force=True)
     return results
