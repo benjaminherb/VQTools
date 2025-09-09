@@ -1,22 +1,68 @@
 import os
 import subprocess
 import tempfile
+import urllib
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line, create_venv, run_in_venv, print_separator, modify_file
 
+MODEL_FILES = [
+    ("COVER.pth", "https://github.com/vztu/COVER/raw/release/Model/COVER.pth"),
+]
 
 def check_cover():
     """Check if Docker and COVER image are available."""
-    if not check_docker():
-        print_line("ERROR: Docker is required for COVER but is not available", force=True)
-        return False
-
-    if not build_docker_image('cover:0.1.0', str(Path(__file__).parent)):
-        print_line("ERROR: Failed to build COVER Docker image", force=True)
-        return False
     
+    repo = Path(__file__).parent / "cover"
+    if not repo.exists():
+        print_separator("BUILDING COVER", newline=True)
+        print_line("Cloning COVER repository...", force=True)
+        try:
+            subprocess.run(['git', 'clone', 'https://github.com/taco-group/COVER.git', str(repo)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+            ## Set random seed for reproducible results and remove CUDA calls (issue in cpu-only environment)
+            modify_file(str(repo / 'evaluate_one_video.py'), [
+                {'action': 'insert', 'pattern': 'import torch', 'content': [
+                    'import random',
+                    'import numpy as np',
+                    'torch.manual_seed(42)',
+                    'np.random.seed(42)',
+                    'random.seed(42)'
+                ]},
+                {'action': 'replace', 'pattern': 'torch.cuda.current_device()', 'content': ''},])
+            # handle mkv and mov files
+            modify_file(str(repo / 'cover' / 'datasets' / 'cover_datasets.py'), [
+                {'action': 'replace', 'pattern': 'elif video_path.endswith(".mp4"):', 'content': 'elif video_path.endswith((".mp4", ".mkv", ".mov")):'}
+            ])
+
+        except subprocess.CalledProcessError as e:
+            print_line(f"ERROR: Failed to clone Cover repository: {e}", force=True)
+            return False
+
+        if not (repo / 'venv').exists():
+            print_line("Creating COVER virtual environment...")
+            create_venv(str(repo / 'venv'), python='python3.8', requirements=str(repo / 'requirements.txt'), compile_decord=True)
+            run_in_venv(str(repo / 'venv'), ['pip', 'install', 'pyiqa'])
+            run_in_venv(str(repo / 'venv'), ['pip', 'install', '-e', str(repo)])
+
+        weights_dir = repo / "pretrained_weights"
+        weights_dir.mkdir(parents=True, exist_ok=True)
+
+        try:
+            for name, url in MODEL_FILES:
+                dest = weights_dir / name
+                if dest.exists():
+                    continue
+                print_line(f"Downloading {name}...")
+                urllib.request.urlretrieve(url, str(dest))
+
+        except Exception as e:
+            print_line(f"ERROR: Failed to download pretrained models: {e}", force=True)
+            return False
+
+        return True
+
     return True
 
 
@@ -39,25 +85,12 @@ def run_cover(mode, distorted, output_dir=None):
     print_key_value("Start Time", ts(start_time))
     
     try:
-        # Run COVER evaluation using evaluate_one_video
-        distorted_name = os.path.basename(distorted)
-        distorted_dir = os.path.dirname(distorted)
-        absolute_distorted_dir = os.path.abspath(distorted_dir)
-        
-        # Check if file exists
-        if not os.path.exists(distorted):
-            print_line(f"ERROR: Video file does not exist: {distorted}", force=True)
-            return None
-            
+        repo_dir = Path(__file__).parent / "cover"
         cmd = [
-            'docker', 'run', '--rm',
-            '-v', f'{absolute_distorted_dir}:/project/data',
-            'cover:0.1.0',
-            'python', '/project/COVER/evaluate_one_video.py',
-            '-v', f'/project/data/{distorted_name}'
+            'python', str(repo_dir / 'evaluate_one_video.py'),
+            '-v', distorted,
         ]
-        
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        result = run_in_venv(str(repo_dir / 'venv'), cmd, work_dir=str(repo_dir))
         
         if result.returncode != 0:
             print_line(f"ERROR: COVER evaluation failed: {result.stderr}", force=True)

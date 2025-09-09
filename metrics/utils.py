@@ -71,7 +71,7 @@ def get_video_info(video_path):
 ## ------ Virtual Environment ------ ##
 
 
-def create_venv(venv_path, python='python3.12', requirements=None, compile_decord=True):
+def create_venv(venv_path, python='python3.12', requirements=None, compile_decord=False):
     """Create a virtual environment at the specified path."""
     try:
         result = subprocess.run([python, '-m', 'venv', venv_path], check=True)
@@ -409,7 +409,7 @@ def modify_file(filepath, modifications):
             if from_line is not None:
                 sorted_mods.append((from_line, mod))
         elif 'line' in mod:
-            sorted_mods.append((mod['line'], mod))  # Keep 0-based
+            sorted_mods.append((mod['line'], mod))
     
     sorted_mods.sort(key=lambda x: x[0], reverse=True)
     
@@ -420,10 +420,8 @@ def modify_file(filepath, modifications):
             if action == 'replace':
                 if 'content' in mod:
                     if 'pattern' in mod:
-                        # Replace pattern within the line, not the whole line
                         lines[line_idx] = lines[line_idx].replace(mod['pattern'], mod['content'])
                     else:
-                        # Replace entire line
                         content = _normalize_content(mod['content'])
                         lines[line_idx:line_idx+1] = content
                     
