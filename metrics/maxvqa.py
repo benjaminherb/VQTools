@@ -90,7 +90,7 @@ def run_maxvqa(mode, distorted, reference, output_dir=None):
     print_key_value("Start Time", ts(start_time))
 
     try:
-        cmd = ['python', 'demo_maxvqa.py', distorted]
+        cmd = ['python', 'demo_maxvqa.py', os.path.abspath(distorted)]
 
         repo = Path(__file__).parent / "maxvqa"
         result = run_in_venv(str(repo / 'venv'), cmd, work_dir=str(repo))
