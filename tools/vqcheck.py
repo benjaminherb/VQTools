@@ -1,11 +1,6 @@
-#!/usr/bin/env python3
-import sys
-import subprocess
 import os
 import argparse
-import cv2
-import json
-from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa, run_uvq, check_uvq, run_maxvqa, check_maxvqa, run_pyiqa, check_pyiqa, run_fastvqa, check_fastvqa
+from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa, run_uvq, check_uvq, run_maxvqa, check_maxvqa, run_pyiqa, check_pyiqa, run_fastvqa, check_fastvqa, check_qalign, run_qalign
 from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet_mode, print_line
 
 MODES = {
@@ -16,16 +11,18 @@ MODES = {
     'cover': ['cover'],
     'uvq': ['uvq'],
     'maxvqa': ['maxvqa'],
-    'pyiqa': ['musiq', 'qalign'],
+    'pyiqa': ['musiq'],
     'fastvqa': ['fastvqa', 'fastervqa'],
+    'qalign': ['qalign'],
     'check': ['check']
+
 }
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-fr', 'cvqa-fr-ms', 'lpips']
 NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
 
-def check_model_availability(mode):
+def check_model_availability(mode, rebuild=False):
     if mode in MODES['dover']:
         if not check_dover():
             return False
@@ -52,6 +49,10 @@ def check_model_availability(mode):
     
     if mode in MODES['fastvqa']:
         if not check_fastvqa():
+            return False
+
+    if mode in MODES['qalign']:
+        if not check_qalign(rebuild=rebuild):
             return False
 
     return True
@@ -139,6 +140,8 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
         return properties_match, run_pyiqa(mode, distorted, reference, output_dir)
     elif mode in MODES['fastvqa']:
         return properties_match, run_fastvqa(mode, distorted, output_dir)
+    elif mode in MODES['qalign']:
+        return properties_match, run_qalign(mode, distorted, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
@@ -151,6 +154,7 @@ def main():
     parser.add_argument("-m", '--mode', choices=AVAILABLE_MODES, default='vmaf4k-full')
     parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
     parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Enable quiet output')
+    parser.add_argument('--rebuild', default=False, action='store_true', help='Delete and rebuild the selected model if applicable')
     args = parser.parse_args()
 
     set_quiet_mode(args.quiet)
@@ -185,7 +189,7 @@ def main():
             print_key_value("Output", f"{args.output}")
 
     print_key_value("Mode", f"{args.mode}")
-    if not check_model_availability(args.mode):
+    if not check_model_availability(args.mode, args.rebuild):
         return
     
     if args.mode in NR_MODES and args.reference:

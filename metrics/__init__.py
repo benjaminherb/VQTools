@@ -7,3 +7,4 @@ from metrics.uvq import run_uvq, check_uvq
 from metrics.maxvqa import run_maxvqa, check_maxvqa
 from metrics.pyiqa import run_pyiqa, check_pyiqa
 from metrics.fastvqa import run_fastvqa, check_fastvqa
+from metrics.qalign import run_qalign, check_qalign

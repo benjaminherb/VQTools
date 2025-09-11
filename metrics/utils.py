@@ -81,6 +81,7 @@ def create_venv(venv_path, python='python3.12', requirements=None, compile_decor
 
         if compile_decord:
             decord_dir =  Path(__file__).parent.parent / 'decord' / 'python'
+            run_in_venv(venv_path, ['pip', 'install', 'numpy']) 
             run_in_venv(venv_path, ['python', 'setup.py', 'install'], work_dir=str(decord_dir))
             # decord_lib = Path(venv_path) / 'decord' /  'libdecord.dylib'
             # target_dir = Path(venv_path) / 'lib' / python / 'site-packages' / 'decord'
@@ -109,6 +110,8 @@ def run_in_venv(venv_path, command, work_dir=None):
     
     try:
         result = subprocess.run(command, capture_output=True, text=True, cwd=str(work_dir), env=env)
+        if result.returncode != 0:
+            print_line(f"ERROR: Command {' '.join(command)} failed with error: {result.stderr}", force=True)
         return result
     except Exception as e:
         print_line(f"ERROR: Failed to run command in venv: {e}", force=True)
