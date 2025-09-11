@@ -75,6 +75,11 @@ def get_video_info(video_path):
 def create_venv(venv_path, python='python3.12', requirements=None, compile_decord=False):
     """Create a virtual environment at the specified path."""
     try:
+        # check if python version exists
+        result = subprocess.run([python, '--version'], capture_output=True, text=True)
+        if result.returncode != 0:
+            raise FileNotFoundError(f"Python version {python} not found, please install it.")
+
         result = subprocess.run([python, '-m', 'venv', venv_path], check=True)
         if result.returncode != 0:
             print_line(f"ERROR: Failed to create virtual environment at {venv_path}", force=True)
