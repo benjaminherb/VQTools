@@ -339,8 +339,6 @@ def get_device():
         return torch.device('cuda')
     elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
         return torch.device('mps')
-    elif torch.backends.metal.is_available():
-        return torch.device('metal')
     else:
         return torch.device('cpu')
 
