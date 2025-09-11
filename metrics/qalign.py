@@ -62,8 +62,11 @@ def run_qalign(mode, distorted, output_dir=None):
     print_key_value("Start Time", ts(start_time))
     repo_path = Path(__file__).parent / "qalign"
     venv_path = repo_path / "venv"
-    result = run_in_venv(str(venv_path), ['python', 'q_align/evaluate/scorer.py', '--device', 'cpu', '--img_path', os.path.abspath(distorted), '--video', '--model-path', 'q-future/one-align'], work_dir=str(repo_path))
-    
+    device = get_device()
+    if device == 'mps':
+        device = 'cpu'  # MPS not supported, fallback to CPU
+    result = run_in_venv(str(venv_path), ['python', 'q_align/evaluate/scorer.py', '--device', device, '--img_path', os.path.abspath(distorted), '--video', '--model-path', 'q-future/one-align'], work_dir=str(repo_path))
+
     results = {
         "timestamp": ts(),
         "distorted": os.path.basename(distorted),
