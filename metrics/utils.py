@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import subprocess
 from datetime import datetime
+import sys
 import cv2
 import torch
 
@@ -80,12 +81,17 @@ def create_venv(venv_path, python='python3.12', requirements=None, compile_decor
             return False
 
         if compile_decord:
-            decord_dir =  Path(__file__).parent.parent / 'decord' / 'python'
-            run_in_venv(venv_path, ['pip', 'install', 'numpy']) 
-            run_in_venv(venv_path, ['python', 'setup.py', 'install'], work_dir=str(decord_dir))
-            # decord_lib = Path(venv_path) / 'decord' /  'libdecord.dylib'
-            # target_dir = Path(venv_path) / 'lib' / python / 'site-packages' / 'decord'
-            # subprocess.run(['cp', str(decord_lib), str(target_dir)], check=True)
+            # on MacOS we need to compile decord from source
+            if not (sys.platform == 'darwin'):
+                run_in_venv(venv_path, ['pip', 'install', 'decord'])
+                return True
+            else:
+                decord_dir =  Path(__file__).parent.parent / 'decord' / 'python'
+                run_in_venv(venv_path, ['pip', 'install', 'numpy']) 
+                run_in_venv(venv_path, ['python', 'setup.py', 'install'], work_dir=str(decord_dir))
+                # decord_lib = Path(venv_path) / 'decord' /  'libdecord.dylib'
+                # target_dir = Path(venv_path) / 'lib' / python / 'site-packages' / 'decord'
+                # subprocess.run(['cp', str(decord_lib), str(target_dir)], check=True)
 
         if requirements:
             pip_path = os.path.join(venv_path, 'bin', 'pip')

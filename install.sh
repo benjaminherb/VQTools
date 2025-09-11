@@ -52,28 +52,31 @@ fi
 
 
 if ! pip show decord &> /dev/null; then
-    echo "Building decord..."
-    cd "${SHARE_DIR}"
-    export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH"
-    git clone --recursive https://github.com/dmlc/decord 
-    cd decord
     if [[ "$OSTYPE" == "darwin"* ]]; then
-      echo "Using MacOS specific fix"
-      git fetch origin pull/353/head:mac
-      git checkout mac
-      sed -i '' '/\/\/set(CMAKE_CUDA_FLAGS/d' CMakeLists.txt
+        echo "Building decord..."
+        cd "${SHARE_DIR}"
+        git clone --recursive https://github.com/dmlc/decord 
+        cd decord
+        export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH"
+        echo "Using MacOS specific fix"
+        git fetch origin pull/353/head:mac
+        git checkout mac
+        sed -i '' '/\/\/set(CMAKE_CUDA_FLAGS/d' CMakeLists.txt
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_AUDIO=OFF -DCMAKE_CXX_STANDARD=11
+        make
+        cd ../python
+        python setup.py install
+        
+        BUILD_LIB="${SHARE_DIR}/decord/build/libdecord.dylib"
+        PKG_DIR=$(python -c "import decord; import os; print(os.path.dirname(decord.__file__))" 2>/dev/null)
+        cp "$BUILD_LIB" "$PKG_DIR/"
+        cp ${SHARE_DIR}/vqenv/decord/libdecord.dylib "${SHARE_DIR}/vqenv/lib/python3.12/site-packages/decord/"
+    else
+        echo "Installing decord via pip"
+        pip install decord
     fi
-    mkdir build
-    cd build
-    cmake .. -DCMAKE_BUILD_TYPE=Release -DUSE_AUDIO=OFF -DCMAKE_CXX_STANDARD=11
-    make
-    cd ../python
-    python setup.py install
-    
-    BUILD_LIB="${SHARE_DIR}/decord/build/libdecord.dylib"
-    PKG_DIR=$(python -c "import decord; import os; print(os.path.dirname(decord.__file__))" 2>/dev/null)
-    cp "$BUILD_LIB" "$PKG_DIR/"
-    cp ${SHARE_DIR}/vqenv/decord/libdecord.dylib "${SHARE_DIR}/vqenv/lib/python3.12/site-packages/decord/"
 fi
 
 cd "$SHARE_DIR"
