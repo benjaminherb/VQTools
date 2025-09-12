@@ -63,7 +63,7 @@ def run_qalign(mode, distorted, output_dir=None):
     repo_path = Path(__file__).parent / "qalign"
     venv_path = repo_path / "venv"
     device = get_device()
-    if device == 'mps':
+    if str(device)== 'mps':
         device = 'cpu'  # MPS not supported, fallback to CPU
     result = run_in_venv(str(venv_path), ['python', 'q_align/evaluate/scorer.py', '--device', str(device), '--img_path', os.path.abspath(distorted), '--video', '--model-path', 'q-future/one-align'], work_dir=str(repo_path))
 
@@ -71,6 +71,10 @@ def run_qalign(mode, distorted, output_dir=None):
         "timestamp": ts(),
         "distorted": os.path.basename(distorted),
     }
+    if result.returncode != 0:
+        print(f"ERROR: QALIGN failed to run! {result.stderr}", force=True)
+        return
+
     results.update(_parse_qalign_output(result.stdout))
 
     end_time = datetime.now()
