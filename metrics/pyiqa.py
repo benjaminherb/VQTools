@@ -11,7 +11,7 @@ from statistics import mean
 import time
 import gc
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, get_video_info
 
 
 def check_pyiqa(mode):
@@ -23,45 +23,38 @@ def check_pyiqa(mode):
     return True
 
 
-def _process_frames_streaming(video_path, metric, device, max_frames=None, stride=1):
+def _process_frames_streaming(video_path, metric, device, stride=1):
     """Process frames from video one by one"""
-    frame_scores = []
+    frame_scores = {}
     
     try:
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             raise Exception(f"Could not open video: {video_path}")
         
-        frame_count = 0
-        processed_count = 0
+        frame_number = 0
         
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
                 
-            if frame_count % stride == 0:
+            if frame_number % stride == 0:
                 start_time = time.time()
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frame_tensor = torch.from_numpy(frame_rgb).permute(2, 0, 1).float() / 255.0
                 frame_tensor = frame_tensor.unsqueeze(0).to(device)  # Add batch dimension
                 conversion_time = time.time() - start_time
-                print_line(f"Frame {processed_count + 1} conversion time: {conversion_time:.4f}s")
                 
                 # Calculate metric score
                 start_inference_time = time.time()
-                score = metric(frame_tensor).cpu().numpy()[0]
+                score = float(metric(frame_tensor).cpu().item())
                 inference_time = time.time() - start_inference_time
-                print_line(f"Frame {processed_count + 1} inference time: {inference_time:.4f}s")
-                
-                frame_scores.append(score)
-                processed_count += 1
-                
-                if max_frames and processed_count >= max_frames:
-                    break
-            
-            frame_count += 1
-        
+
+                frame_scores[frame_number] = score
+
+            frame_number += 1
+
         cap.release()
         
         if not frame_scores:
@@ -76,6 +69,7 @@ def _process_frames_streaming(video_path, metric, device, max_frames=None, strid
 def run_pyiqa(mode, distorted, reference, output_dir=None):
     """Run PyIQA video quality assessment."""
 
+    output_file = None
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
         if os.path.exists(output_file):
@@ -90,9 +84,14 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
     try:
         device = get_device()
 
+        fps = get_video_info(distorted).get('fps', 60)
+        stride = max(1, int(fps/2))
+
         metric = pyiqa.create_metric(mode, as_loss=False, device=device)
-        frame_scores = _process_frames_streaming(distorted, metric, device, stride=1)
-        
+        result = _process_frames_streaming(distorted, metric, device, stride=stride)
+
+        frame_scores = list(result.values())
+
         mean_score = mean(frame_scores)
         min_score = min(frame_scores)
         max_score = max(frame_scores)
@@ -110,16 +109,22 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
         results = {
             'timestamp': ts(),
             'distorted': os.path.basename(distorted),
-            'reference': os.path.basename(reference) if reference else None,
+            'frame_numbers': list(result.keys())
+            }
+
+        if reference:
+            results['reference'] = os.path.basename(reference) if reference else None
+
+        results.update({
             'metric': mode,
             'mean_score': mean_score,
             'min_score': min_score,
             'max_score': max_score,
-            'frames_processed': len(frame_scores),
-            'frame_scores': frame_scores
-        }
+            'frame_scores': result,
+            'stride': stride,
+        })
         
-        if output_file.endswith('.json'):
+        if output_file:
             save_json(results, output_file)
         
         return results
