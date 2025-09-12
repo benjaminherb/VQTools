@@ -2,6 +2,63 @@ import os
 import json
 import argparse
 from collections import defaultdict
+from tqdm import tqdm
+
+metric_configs = {
+    # metric name (*.name.json), output key in final json, extractor functions to get the value from loaded json
+    'vmaf':[('vmaf', lambda x: x['pooled_metrics']['vmaf']['mean']),
+            ('vmaf-neg', lambda x: x['pooled_metrics']['vmaf_neg']['mean']),
+            ('psnr', lambda x: (6 * x['pooled_metrics']['psnr_y']['mean'] 
+                                  + x['pooled_metrics']['psnr_cb']['mean'] 
+                                  + x['pooled_metrics']['psnr_cr']['mean']) / 8),
+            ('ssim', lambda x: x['pooled_metrics']['float_ssim']['mean']),
+            ('ms-ssim', lambda x: x['pooled_metrics']['float_ms_ssim']['mean']),
+            ('psnr-y', lambda x: x['pooled_metrics']['psnr_y']['mean']),
+            ('psnr-cb', lambda x: x['pooled_metrics']['psnr_cb']['mean']),
+            ('psnr-cr', lambda x: x['pooled_metrics']['psnr_cr']['mean'])],
+    'avqbitsh0f': [('avqbitsh0f', lambda x: x["per_sequence"])],
+    'lpips': [('lpips', lambda x: x["metadata"]['mean_distance'])],
+    'dover': [('dover', lambda x: x["fused_score"]),
+              ('dover_aesthetic', lambda x: x["aesthetic_score"]),
+              ('dover_technical', lambda x: x["technical_score"])],
+    'cover': [('cover', lambda x: x['fused_score']),
+              ('cover_aesthetic', lambda x: x['aesthetic_score']),
+              ('cover_technical', lambda x: x['technical_score']),
+              ('cover_semantic', lambda x: x['semantic_score'])],
+    'maxvqa': [('maxvqa', lambda x: x['overall_score']),
+               ('maxvqa_quality', lambda x: x['high quality vs low quality']),
+               ('maxvqa_content', lambda x: x['good content vs bad content']),
+               ('maxvqa_composition', lambda x: x['organized composition vs chaotic composition']),
+               ('maxvqa_color', lambda x: x['vibrant color vs faded color']),
+               ('maxvqa_lighting', lambda x: x['contrastive lighting vs gloomy lighting']),
+               ('maxvqa_trajectory', lambda x: x['consistent trajectory vs incoherent trajectory']),
+               ('maxvqa_aesthetics', lambda x: x['good aesthetics vs bad aesthetics']),
+               ('maxvqa_sharpness', lambda x: x['sharp vs fuzzy']),
+               ('maxvqa_focus', lambda x: x['in-focus vs out-of-focus']),
+               ('maxvqa_noise', lambda x: x['noiseless vs noisy']),
+               ('maxvqa_motion', lambda x: x['clear-motion vs blurry-motion']),
+               ('maxvqa_stability', lambda x: x['stable vs shaky']),
+               ('maxvqa_exposure', lambda x: x['well-exposed vs poorly-exposed']),
+               ('maxvqa_compression', lambda x: x['original vs compressed']),
+               ('maxvqa_fluency', lambda x: x['fluent vs choppy']),
+               ('maxvqa_clarity', lambda x: x['clear vs severely degraded'])],
+    'uvq': [('uvq', lambda x: x['uvq']),
+            ('uvq_compression', lambda x: x['compression']),
+            ('uvq_content', lambda x: x['content']),
+            ('uvq_distortion', lambda x: x['distortion']),
+            ('uvq_compression_content', lambda x: x['compression_content']),
+            ('uvq_compression_distortion', lambda x: x['compression_distortion']),
+            ('uvq_content_distortion', lambda x: x['content_distortion'])],
+    'fastvqa': [('fastvqa', lambda x: x['score'])],
+    'fastervqa': [('fastervqa', lambda x: x['score'])],
+    'musiq': [('musiq', lambda x: x['mean_musiq'])],
+    'qalign': [('qalign', lambda x: x['score'])],
+    'cvqa-nr': [('cvqa-nr', lambda x: x['score'])],
+    'cvqa-nr-ms': [('cvqa-nr-ms', lambda x: x['score'])],
+    'cvqa-fr': [('cvqa-fr', lambda x: x['score'])],
+    'cvqa-fr-ms': [('cvqa-fr-ms', lambda x: x['score'])],
+    'p12044': [('p12044', lambda x: x['score'])],
+}
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Consolidate video quality metrics into a single JSON file')
@@ -30,7 +87,6 @@ def extract_name_and_metric(filename):
     if len(parts) >= 3 and parts[-1] == 'json':
         base_name = '.'.join(parts[:-2])
         metric_type = parts[-2]  # e.g., 'vmaf', 'dover', etc.
-        print(filename)
         return base_name, metric_type
 
     return None, None
@@ -61,169 +117,93 @@ def main():
             
             metric_files[base_name][metric_type] = os.path.join(root, filename)
     
-    # Track successfully processed metrics for missing metrics report
-    successfully_processed_metrics = defaultdict(set)
-    all_successful_metric_types = set()
+    errors = []
     
-    # Track statistics for general report
-    existing_entries_count = len(consolidated_data)
-    new_entries_count = 0
-    updated_entries_count = 0
-    total_metric_files_found = 0
-    failed_loads = 0
-    
-    # Process each base name
-    for base_name, metrics in metric_files.items():
-        # Count total metric files found
-        total_metric_files_found += len(metrics)
-        
-        # Initialize or get existing entry
-        was_existing = base_name in consolidated_data
+    for base_name, metrics in tqdm(metric_files.items(), desc="Parsing Metrics", unit="video"):
         if base_name not in consolidated_data:
             consolidated_data[base_name] = {
                 'name': base_name,
-                'source_name': base_name.split('_')[0]
             }
-            new_entries_count += 1
-        else:
-            updated_entries_count += 1
-        
-        entry = consolidated_data[base_name]
-        
-        renamed_keys = {
-            'float_ssim': 'ssim',
-            'float_ms_ssim': 'ms-ssim',
-            'ms_ssim': 'ms-ssim',
-            'compressed-vqa-nr': 'cvqa-nr',
-            'compressed-vqa-fr': 'cvqa-fr',
-            'compressed-vqa-fr-ms': 'cvqa-fr-ms'
-        }
 
-        for old_key, new_key in renamed_keys.items():
-            if old_key in entry:
-                entry[new_key] = entry.pop(old_key)
+        if 'meta' in metrics:
+            metadata = load_json_if_exists(metrics['meta'])
+            if metadata:
+                consolidated_data[base_name].update(metadata)
+
+        entry = consolidated_data[base_name]
          
-        if 'vmaf' in metrics:
-            vmaf = load_json_if_exists(metrics['vmaf'])
-            if vmaf:
-                entry.update({
-                    'psnr': (6 * vmaf['pooled_metrics']['psnr_y']['mean'] 
-                            + vmaf['pooled_metrics']['psnr_cb']['mean'] 
-                            + vmaf['pooled_metrics']['psnr_cr']['mean']) / 8,
-                    'psnr_y': vmaf['pooled_metrics']['psnr_y']['mean'],
-                    'psnr_cb': vmaf['pooled_metrics']['psnr_cb']['mean'],
-                    'psnr_cr': vmaf['pooled_metrics']['psnr_cr']['mean'],
-                    'ssim': vmaf['pooled_metrics']['float_ssim']['mean'],
-                    'ms-ssim': vmaf['pooled_metrics']['float_ms_ssim']['mean'],
-                    'vmaf': vmaf['pooled_metrics']['vmaf']['mean'],
-                    'vmaf-neg': vmaf['pooled_metrics']['vmaf_neg']['mean'],
-                })
-                successfully_processed_metrics[base_name].add('vmaf')
-                all_successful_metric_types.add('vmaf')
-            else:
-                failed_loads += 1
-        
-        # Process other metrics
-        metric_mappings = {
-            'avqbitsh0f': ('avqbitsh0f', lambda x: x["per_sequence"]),
-            'lpips': ('lpips', lambda x: x["metadata"]['mean_distance']),
-            'dover': ('dover', lambda x: x["dover"]),
-            'dover': ('dover', lambda x: x["overall_score"]),
-            'dover': ('dover', lambda x: x["fused_score"]),
-            'fastvqa': ('fastvqa', lambda x: x['fastervqa_score']),
-            'musiq': ('musiq', lambda x: x['mean_musiq']),
-            'qalign': ('qalign', lambda x: x['qalign_score']),
-            'NRCompressedVQA': ('cvqa-nr', lambda x: x['score']),
-            'FRCompressedVQA': ('cvqa-fr', lambda x: x['score']),
-            'FRCompressedVQAMS': ('cvqa-fr-ms', lambda x: x['score']),
-            'cvqa-nr': ('cvqa-nr', lambda x: x['score']),
-            'cvqa-fr': ('cvqa-fr', lambda x: x['score']),
-            'cvqa-fr-ms': ('cvqa-fr-ms', lambda x: x['score']),
-            'p12044': ('p12044', lambda x: x['score']),
-            'cover': ('cover', lambda x: x['fused_score']),
-            'uvq': ('uvq', lambda x: x['uvq']),
-          
-        }
-        
-        for metric_key, (output_key, extractor) in metric_mappings.items():
-            if metric_key in metrics:
-                data = load_json_if_exists(metrics[metric_key])
-                if data:
-                    try:
-                        entry[output_key] = extractor(data)
-                        successfully_processed_metrics[base_name].add(metric_key)
-                        all_successful_metric_types.add(metric_key)
-                    except (KeyError, TypeError):
-                        print(f"Warning: Could not extract {metric_key} for {base_name}")
-                        failed_loads += 1
-                else:
-                    failed_loads += 1
+        for metric_key, config in metric_configs.items():
+            if not metric_key in metrics:
+                continue
+
+            data = load_json_if_exists(metrics[metric_key])
+            if not data:
+                errors.append(f"Failed to load {metrics[metric_key]}")
+                continue
+
+            for config_item in config:
+                output_key, extractor = config_item
+                try:
+                    extracted_value = extractor(data)
+                    entry[output_key] = extracted_value
+                except (KeyError, TypeError):
+                    errors.append(f"Failed to extract {output_key} from {metrics[metric_key]}")
     
-    # Generate comprehensive report
     output_list = list(consolidated_data.values())
+    
+    total_metric_files = sum(len(metrics) for metrics in metric_files.values())
+    
+    all_metric_keys = set()
+    metric_coverage = defaultdict(int)
+    
+    for entry in output_list:
+        for key in entry.keys():
+            if key not in ['name']:  # Skip non-metric keys
+                all_metric_keys.add(key)
+                metric_coverage[key] += 1
+    
+    total_entries = len(output_list)
+    fully_covered_metrics = [k for k, v in metric_coverage.items() if v == total_entries]
+    partially_covered_metrics = [k for k, v in metric_coverage.items() if 0 < v < total_entries]
+    missing_metrics = [k for k in all_metric_keys if metric_coverage[k] == 0]
     
     print("\n" + "="*60)
     print("CONSOLIDATION REPORT")
     print("="*60)
     
-    # Basic statistics
-    print(f"📁 Metrics Directory: {args.metrics_dir}")
-    print(f"📄 Output File: {args.output_file}")
-    print(f"📋 Base File: {'Yes (' + args.existing_json + ')' if args.existing_json else 'No'}")
+    print(f"Metrics Directory: {args.metrics_dir}")
+    print(f"Output File: {args.output_file}")
+    print(f"Base File: {'Yes (' + args.existing_json + ')' if args.existing_json else 'No'}")
     print()
     
-    # File processing statistics
-    print("📊 PROCESSING STATISTICS:")
+    print("FILES:")
     print(f"   • Video entries processed: {len(metric_files)}")
-    print(f"   • Metric files found: {total_metric_files_found}")
-    print(f"   • Successful loads: {total_metric_files_found - failed_loads}")
-    print(f"   • Failed loads: {failed_loads}")
+    print(f"   • Metric files found: {total_metric_files}")
     print()
     
-    # Entry statistics
-    if args.existing_json:
-        print("📝 ENTRY STATISTICS:")
-        print(f"   • Existing entries (from base file): {existing_entries_count}")
-        print(f"   • New entries added: {new_entries_count}")
-        print(f"   • Existing entries updated: {updated_entries_count}")
-        print(f"   • Total entries in output: {len(output_list)}")
+    if all_metric_keys:
+        print("METRICS:")
+        print(f"   • Total unique metrics found: {len(all_metric_keys)}")
+        print(f"   • Fully covered metrics ({len(fully_covered_metrics)}): {', '.join(sorted(fully_covered_metrics))}")
+        if partially_covered_metrics:
+            partial_info = [f"{k} ({metric_coverage[k]}/{total_entries})" for k in sorted(partially_covered_metrics)]
+            print(f"   • Partially covered metrics: {', '.join(partial_info)}")
+        if missing_metrics:
+            print(f"   • Missing metrics: {', '.join(sorted(missing_metrics))}")
         print()
-    
-    # Metrics overview
-    if all_successful_metric_types:
-        print("🎯 METRICS OVERVIEW:")
-        print(f"   • Unique metric types found: {len(all_successful_metric_types)}")
-        print(f"   • Available metrics: {', '.join(sorted(all_successful_metric_types))}")
+
+    if errors:
+        print("ERRORS ENCOUNTERED:")
+        for error in errors:
+            print(f"   • {error}")
         print()
-        
-        # Missing metrics analysis
-        if len(metric_files) > 1:
-            missing_count = 0
-            for base_name in metric_files.keys():
-                missing_metrics = all_successful_metric_types - successfully_processed_metrics[base_name]
-                if missing_metrics:
-                    missing_count += 1
-            
-            if missing_count > 0:
-                print("⚠️  MISSING METRICS WARNINGS:")
-                for base_name in sorted(metric_files.keys()):
-                    missing_metrics = all_successful_metric_types - successfully_processed_metrics[base_name]
-                    if missing_metrics:
-                        missing_list = sorted(missing_metrics)
-                        print(f"   • {base_name}: missing {', '.join(missing_list)}")
-                print(f"   • Total files with missing metrics: {missing_count}/{len(metric_files)}")
-            else:
-                print("✅ METRICS CONSISTENCY:")
-                print("   • All files have consistent metrics")
-        print()
-    
-    print("="*60)
-    
+
     os.makedirs(os.path.dirname(args.output_file) if os.path.dirname(args.output_file) else '.', exist_ok=True)
     
     with open(args.output_file, 'w') as f:
         json.dump(output_list, f, indent=2)
     
+    print("="*60)    
     print(f"Consolidated {len(output_list)} entries to {args.output_file}")
 
 if __name__ == "__main__":
