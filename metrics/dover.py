@@ -94,6 +94,7 @@ def run_dover(mode, distorted, output_dir=None):
     start_time = datetime.now()
     print_line("\nRESULTS")
     print_key_value("Start Time", ts(start_time))
+    distorted = os.path.abspath(distorted)
     
     try:
         repo = Path(__file__).parent / "dover" 

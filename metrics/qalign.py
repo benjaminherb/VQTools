@@ -33,7 +33,7 @@ def check_qalign(rebuild=False):
                 {'action': 'replace', 'pattern': "kwargs['torch_dtype'] = torch.float16", 'content': "kwargs['torch_dtype'] = torch.float16 if device != 'cpu' else torch.float32"},
             ])
 
-            print("Creating virtual environment...")
+            print_line("Creating virtual environment...")
             create_venv(str(venv_path), python='python3.8', compile_decord=True)
             run_in_venv(str(venv_path), ['pip', 'install', '-e', str(repo_path)])
             run_in_venv(str(venv_path), ['pip', 'install', 'numpy==1.24.3', 'protobuf'])
@@ -72,7 +72,7 @@ def run_qalign(mode, distorted, output_dir=None):
         "distorted": os.path.basename(distorted),
     }
     if result.returncode != 0:
-        print(f"ERROR: QALIGN failed to run! {result.stderr}", force=True)
+        print_line(f"ERROR: QALIGN failed to run! {result.stderr}", force=True)
         return
 
     results.update(_parse_qalign_output(result.stdout))
