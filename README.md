@@ -49,11 +49,12 @@ vqcheck -m lpips -d /path/to/distorted -r /path/to/references/ -o ./results/
 | PSNR | FR | `psnr` | | Faster way to just calculate PSNR|
 | VMAF | FR | `vmaf` `vmaf4k` `vmaf-full` `vmaf4k-full` | [VMAF](https://github.com/Netflix/vmaf) | Always includes SSIM/MS-SSIM and PSNR; `full` variants additionally include the NEG (no-enhancement gain) variants (slower).|
 | LPIPS |FR| `lpips` | [PerceptualSimilarity](https://github.com/richzhang/PerceptualSimilarity) | [Paper](https://arxiv.org/abs/1801.03924) - frame-wise metric, uses `alex` as network |
-| PyIQA | FR/NR | `musiq` `qalign` | [IQA-Pytorch](https://github.com/chaofengc/IQA-PyTorch) | [Musiq](https://arxiv.org/abs/2108.05997) - [Q-Align](https://arxiv.org/abs/2312.17090) — image quality metrics provided as mean and per-frame scores. |
+| PyIQA | FR/NR | `musiq` | [IQA-Pytorch](https://github.com/chaofengc/IQA-PyTorch) | [Musiq](https://arxiv.org/abs/2108.05997) — image quality metrics provided as mean and per-frame scores (sampled at 2 per second). |
 | CVQA | FR/NR | `cvqa-nr` `cvqa-nr-ms` `cvqa-fr` `cvqa-fr-ms` | [CompressedVQA](https://github.com/sunwei925/CompressedVQA) | [Paper](https://arxiv.org/abs/2106.01111) |
 | FastVQA |NR| `fastvqa` `fastervqa`| [FAST-VQA/FasterVQA](https://github.com/VQAssessment/FAST-VQA-and-FasterVQA) | [Paper](https://arxiv.org/abs/2210.05357) |
 | UVQ |NR| `uvq` | [UVQ](https://github.com/google/uvq) | [Paper](https://openaccess.thecvf.com/content/CVPR2021/html/Wang_Rich_Features_for_Perceptual_Quality_Assessment_of_UGC_Videos_CVPR_2021_paper.html) - separate and combined scores for compression, distortion and content|
 | Dover |NR| `dover` | [DOVER](https://github.com/QualityAssessment/DOVER) | [Paper](https://arxiv.org/abs/2211.04894) -  includes technical and aesthetic score |
+| Q-Align |NR| `qalign` | [Q-Align](https://github.com/Q-Future/Q-Align) | [Paper](https://arxiv.org/abs/2312.17090) |
 | MaxVQA | NR | `maxvqa` | [ExplainableVQA](https://github.com/VQAssessment/ExplainableVQA) | [Paper](https://arxiv.org/abs/2305.12726) - several scores for different quality factors |
 | Cover | NR | `cover` | [COVER](https://github.com/taco-group/COVER) | [Paper](https://openaccess.thecvf.com/content/CVPR2024W/AI4Streaming/papers/He_COVER_A_Comprehensive_Video_Quality_Evaluator_CVPRW_2024_paper.pdf) — semantic, technical and aesthetic scores. |
 
