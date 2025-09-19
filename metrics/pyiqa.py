@@ -40,18 +40,17 @@ def _process_frames_streaming(video_path, metric, device, stride=1):
                 break
                 
             if frame_number % stride == 0:
-                start_time = time.time()
                 frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 frame_tensor = torch.from_numpy(frame_rgb).permute(2, 0, 1).float() / 255.0
                 frame_tensor = frame_tensor.unsqueeze(0).to(device)  # Add batch dimension
-                conversion_time = time.time() - start_time
                 
                 # Calculate metric score
-                start_inference_time = time.time()
-                score = float(metric(frame_tensor).cpu().item())
-                inference_time = time.time() - start_inference_time
+                try:
+                    score = float(metric(frame_tensor).cpu().item())
+                    frame_scores[frame_number] = score
+                except Exception as e:
+                    print_line(f"Error on frame {frame_number} (SKIPPING): {e}", force=True)
 
-                frame_scores[frame_number] = score
 
             frame_number += 1
 
