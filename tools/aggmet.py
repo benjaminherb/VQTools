@@ -67,6 +67,8 @@ metric_configs = {
             ('uvq_content_distortion', lambda x: x['content_distortion'])],
     'fastvqa': [('fastvqa', lambda x: x['score'])],
     'fastervqa': [('fastervqa', lambda x: x['score'])],
+    'brisque': [('brisque', lambda x: x['mean_score'])],
+    'niqe': [('niqe', lambda x: x['mean_score'])],
     'musiq': [('musiq', lambda x: x['mean_musiq']),
               ('musiq', lambda x: x['mean_score'])],
     'qalign': [('qalign', lambda x: x['qalign_score']),
@@ -135,7 +137,13 @@ def main():
             
             metric_files[base_name][metric_type] = os.path.join(root, filename)
     
-    errors = []
+    errors = {
+        'failed_load': [],
+        'failed_extract': {
+            metric_key: {output_key: [] for output_key, _ in config}
+            for metric_key, config in metric_configs.items()
+        },
+    }
     
     for base_name, metrics in tqdm(metric_files.items(), desc="Parsing Metrics", unit="video"):
         if base_name not in consolidated_data:
@@ -156,7 +164,7 @@ def main():
 
             data = load_json_if_exists(metrics[metric_key])
             if not data:
-                errors.append(f"Failed to load {metrics[metric_key]}")
+                errors['failed_load'].append(metrics[metric_key])
                 continue
 
             for config_item in config:
@@ -165,7 +173,8 @@ def main():
                     extracted_value = extractor(data)
                     entry[output_key] = extracted_value
                 except (KeyError, TypeError):
-                    errors.append(f"Failed to extract {output_key} from {metrics[metric_key]}")
+                    errors['failed_extract'][metric_key][output_key].append(metrics[metric_key])
+
     
     output_list = list(consolidated_data.values())
     
@@ -210,11 +219,22 @@ def main():
             print(f"   • Missing metrics: {', '.join(sorted(missing_metrics))}")
         print()
 
-    if errors:
-        print("ERRORS ENCOUNTERED:")
-        for error in errors:
-            print(f"   • {error}")
-        print()
+    failed_output_keys = []
+    for metric_key, output_dict in errors['failed_extract'].items():
+        for output_key, file_list in output_dict.items():
+            if file_list and output_key not in fully_covered_metrics:
+                failed_output_keys.append(f"{output_key} ({len(file_list)})")
+
+
+    if errors['failed_load'] or failed_output_keys:
+        print("ERRORS:")
+    if errors['failed_load']:
+        print(f"   • Failed to load JSON files ({len(errors['failed_load'])})")
+        for filepath in errors['failed_load']:
+            print(f"       - {filepath}")
+    if failed_output_keys:
+        print(f"   • Failed to extract metrics: {', '.join(sorted(failed_output_keys))}")
+    print()
 
     os.makedirs(os.path.dirname(args.output_file) if os.path.dirname(args.output_file) else '.', exist_ok=True)
     
