@@ -11,7 +11,7 @@ MODES = {
     'cover': ['cover'],
     'uvq': ['uvq'],
     'maxvqa': ['maxvqa'],
-    'pyiqa': ['musiq', 'brisque'],
+    'pyiqa': ['musiq', 'brisque', 'niqe'],
     'fastvqa': ['fastvqa', 'fastervqa'],
     'qalign': ['qalign'],
     'check': ['check']

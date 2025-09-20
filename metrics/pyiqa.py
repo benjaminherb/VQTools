@@ -44,7 +44,6 @@ def _process_frames_streaming(video_path, metric, device, stride=1):
                 frame_tensor = torch.from_numpy(frame_rgb).permute(2, 0, 1).float() / 255.0
                 frame_tensor = frame_tensor.unsqueeze(0).to(device)  # Add batch dimension
                 
-                # Calculate metric score
                 try:
                     score = float(metric(frame_tensor).cpu().item())
                     frame_scores[frame_number] = score
@@ -82,6 +81,8 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
     
     try:
         device = get_device()
+        if str(device) == 'mps' and mode.lower() == 'niqe':
+            device = 'cpu' # NIQE has issues with MPS and float64
 
         fps = get_video_info(distorted).get('fps', 60)
         stride = max(1, int(fps/2))
