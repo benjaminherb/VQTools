@@ -153,6 +153,11 @@ def main():
 
         if 'meta' in metrics:
             metadata = load_json_if_exists(metrics['meta'])
+
+            for key, value in metadata.items():
+                if key not in ('bitrate', 'bpp', 'bit_depth', 'fps', 'frames', 'filesize', 'encoding_time', 'encoding_speed'):
+                    metadata.pop(key)
+
             if metadata:
                 consolidated_data[base_name].update(metadata)
 
