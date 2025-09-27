@@ -5,7 +5,7 @@ from pathlib import Path
 
 VIDEO_EXTENSIONS = ['.mkv', '.mp4', '.mov', '.avi', '.m4v', '.wmv']
 
-def transcode(input_dir, output_dir, codec='ffvhuff', overwrite=False, dryrun=False):
+def transcode(input_dir, output_dir, codec='ffvhuff', scale=None, overwrite=False, dryrun=False):
     """Convert all video files to a specified codec"""
     input_path = Path(input_dir)
     output_path = Path(output_dir)
@@ -41,6 +41,10 @@ def transcode(input_dir, output_dir, codec='ffvhuff', overwrite=False, dryrun=Fa
             cmd.extend(['-c:v', 'ffvhuff'])
         else:
             raise ValueError(f"Codec '{codec}' not implemented. Supported codecs: h265, ffvhuff")
+
+        if scale is not None:
+            width, height = scale
+            cmd.extend(['-vf', f'scale={width}:{height}:force_original_aspect_ratio=decrease', '-sws_flags', 'bicubic'])
             
         cmd.extend([
             '-c:a', 'copy', '-c:s', 'copy',
@@ -71,6 +75,7 @@ def main():
     parser.add_argument('-o', '--output', required=True, help='Output directory for converted files')
     parser.add_argument('--codec', choices=['ffvhuff', 'h265'], default='h265', 
                         help='Video codec to use (default: h265)')
+    parser.add_argument('--scale', type=int, nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Scale videos to specified WIDTH and HEIGHT (e.g., --scale 1920 1080)')
     parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files')
     parser.add_argument('--dryrun', action='store_true', help='Show commands without executing them')
     
@@ -84,10 +89,11 @@ def main():
     print(f"Input directory: {args.input}")
     print(f"Output directory: {args.output}")
     print(f"Codec: {args.codec}")
+    print(f"Scale: {args.scale[0]}x{args.scale[1]}")
     print(f"Overwrite: {args.overwrite}")
     print(f"Dry run: {args.dryrun}")
     
-    success_count = transcode(args.input, args.output, args.codec, args.overwrite, args.dryrun)
+    success_count = transcode(args.input, args.output, args.codec, args.scale, args.overwrite, args.dryrun)
 
     total_files = len([f for f in list(input_path.glob('*')) if f.suffix in VIDEO_EXTENSIONS and not f.name.startswith('.')])
     print(f"\nConversion complete: {success_count}/{total_files} successful")
