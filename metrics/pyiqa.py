@@ -22,15 +22,27 @@ def check_pyiqa(mode):
         return False
     return True
 
+def _preprocess_frame(frame, device):
+    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame_tensor = torch.from_numpy(frame_rgb).permute(2, 0, 1).float() / 255.0
+    frame_tensor = frame_tensor.unsqueeze(0).to(device)  # Add batch dimension
+    return frame_tensor
 
-def _process_frames_streaming(video_path, metric, device, stride=1):
+def _process_frames_streaming(video_path, reference_path, metric, device, stride=1):
     """Process frames from video one by one"""
+    is_fr = reference_path is not None
     frame_scores = {}
     
     try:
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             raise Exception(f"Could not open video: {video_path}")
+
+        cap_ref = None
+        if is_fr:
+            cap_ref = cv2.VideoCapture(reference_path)
+            if not cap_ref.isOpened():
+                raise Exception(f"Could not open reference video: {reference_path}")
         
         frame_number = 0
         
@@ -38,14 +50,20 @@ def _process_frames_streaming(video_path, metric, device, stride=1):
             ret, frame = cap.read()
             if not ret:
                 break
+
+            ret, frame_ref = None, None
+            if is_fr:
+                ret, frame_ref = cap_ref.read()
                 
-            if frame_number % stride == 0:
-                frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                frame_tensor = torch.from_numpy(frame_rgb).permute(2, 0, 1).float() / 255.0
-                frame_tensor = frame_tensor.unsqueeze(0).to(device)  # Add batch dimension
+            if frame_number % stride == stride // 2:
+                frame_tensor = _preprocess_frame(frame, device)
                 
                 try:
-                    score = float(metric(frame_tensor).cpu().item())
+                    if is_fr:
+                        frame_tensor_ref = _preprocess_frame(frame_ref, device)
+                        score = float(metric(frame_tensor, frame_tensor_ref).cpu().item())
+                    else:   
+                        score = float(metric(frame_tensor).cpu().item())
                     frame_scores[frame_number] = score
                 except Exception as e:
                     print_line(f"Error on frame {frame_number} (SKIPPING): {e}", force=True)
@@ -88,7 +106,7 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
         stride = max(1, int(fps/2))
 
         metric = pyiqa.create_metric(mode, as_loss=False, device=device)
-        result = _process_frames_streaming(distorted, metric, device, stride=stride)
+        result = _process_frames_streaming(distorted, reference, metric, device, stride=stride)
 
         frame_scores = list(result.values())
 
