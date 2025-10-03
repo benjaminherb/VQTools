@@ -11,14 +11,14 @@ MODES = {
     'cover': ['cover'],
     'uvq': ['uvq'],
     'maxvqa': ['maxvqa'],
-    'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'dists'],
+    'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists'],
     'fastvqa': ['fastvqa', 'fastervqa'],
     'qalign': ['qalign'],
     'check': ['check']
 
 }
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
 
