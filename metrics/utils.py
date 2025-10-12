@@ -187,6 +187,7 @@ def get_video_files(dir):
                 continue
 
             video_files.append(os.path.join(root, file))
+    video_files.sort()
     return video_files
 
 

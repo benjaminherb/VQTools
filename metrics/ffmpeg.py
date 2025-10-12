@@ -7,7 +7,7 @@ import json
 from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line
 
 
-def run_ffmpeg(mode, distorted, reference, output_dir=None):
+def run_ffmpeg(mode, distorted, reference, scale=None, output_dir=None):
 
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
@@ -25,7 +25,7 @@ def run_ffmpeg(mode, distorted, reference, output_dir=None):
         'ffmpeg',
         '-i', distorted,
         '-i', reference,  
-        '-lavfi', get_lavfi(mode, output_file),
+        '-lavfi', get_lavfi(mode, output_file, scale=scale),
         '-f', 'null',
         '-'
     ]
@@ -83,9 +83,13 @@ def run_ffmpeg(mode, distorted, reference, output_dir=None):
         return None
 
 
-def get_lavfi(mode, output_file):
+def get_lavfi(mode, output_file, scale=None):
     mode = mode.lower()
     lavfi = ''
+    prestring = f'[0:v]setpts=PTS-STARTPTS[distorted];[1:v]setpts=PTS-STARTPTS[reference];[distorted][reference]'
+    if scale is not None:
+        prestring = f'[0:v]scale={scale[0]}:{scale[1]}:flags=bicubic,setpts=PTS-STARTPTS[distorted];[1:v]setpts=PTS-STARTPTS[reference];[distorted][reference]'
+
     if 'vmaf' in mode:
         if '4k' in mode :
             model_name, model_neg_name = "vmaf_4k_v0.6.1", "vmaf_4k_v0.6.1neg"
@@ -93,12 +97,12 @@ def get_lavfi(mode, output_file):
             model_name, model_neg_name =  "vmaf_v0.6.1", "vmaf_v0.6.1neg"
 
         if 'full' in mode:
-            lavfi = f"libvmaf='model=version={model_name}\\:name=vmaf|version={model_neg_name}\\:name=vmaf_neg:feature=name=psnr|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
+            lavfi = f"{prestring}libvmaf='model=version={model_name}\\:name=vmaf|version={model_neg_name}\\:name=vmaf_neg:feature=name=psnr|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
         else:
-            lavfi = f"libvmaf='model=version={model_name}\\:name=vmaf:feature=name=psnr|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
+            lavfi = f"{prestring}libvmaf='model=version={model_name}\\:name=vmaf:feature=name=psnr|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
 
     elif 'psnr' in mode:
-        lavfi = f"psnr='stats_file={output_file}'"
+        lavfi = f"{prestring}psnr='stats_file={output_file}'"
 
     return lavfi
 

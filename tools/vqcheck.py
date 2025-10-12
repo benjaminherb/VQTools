@@ -113,17 +113,27 @@ def compare_video_properties(reference, distorted):
 
 def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True):
     properties_match = True
+    scale = None
     if mode in FR_MODES and reference is not None:
         properties_match = compare_video_properties(reference, distorted)
 
         if mode == 'check':
             return properties_match, None
         
-        if not properties_match:
+        elif not properties_match and 'vmaf' or 'psnr' in mode:
+            ref_info = get_video_info(reference)
+            dis_info = get_video_info(distorted)
+            if ref_info is not None and dis_info is not None and (ref_info['width'] != dis_info['width'] or ref_info['height'] != dis_info['height']):
+                scale = (ref_info['width'], ref_info['height'])
+                print_line(f"Scaling distorted video to {scale[0]}x{scale[1]} for analysis", force=True)
+            else: 
+                return properties_match, None 
+
+        elif not properties_match:
             return properties_match, None
 
     if mode in MODES['ffmpeg']:
-        return properties_match, run_ffmpeg(mode, distorted, reference, output_dir)
+        return properties_match, run_ffmpeg(mode, distorted, reference, scale, output_dir)
     elif mode in MODES['cvqa']:
         return properties_match, run_cvqa(mode, distorted, reference, output_dir)
     elif mode in MODES['lpips']:
