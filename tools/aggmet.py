@@ -156,10 +156,12 @@ def main():
 
         if 'meta' in metrics:
             metadata = load_json_if_exists(metrics['meta'])
-
             for key, value in metadata.items():
                 if key in ('bitrate', 'bpp', 'bit_depth', 'fps', 'frames', 'filesize', 'encoding_time', 'encoding_speed'):
                     consolidated_data[base_name][key] = value
+                if key == 'upscaling':
+                    print('upscaling metadata:', value)
+                    consolidated_data[base_name]['upscaling_spf'] = value['spf']
 
         entry = consolidated_data[base_name]
          
