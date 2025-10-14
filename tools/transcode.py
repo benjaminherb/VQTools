@@ -89,7 +89,8 @@ def main():
     print(f"Input directory: {args.input}")
     print(f"Output directory: {args.output}")
     print(f"Codec: {args.codec}")
-    print(f"Scale: {args.scale[0]}x{args.scale[1]}")
+    if args.scale:
+        print(f"Scale: {args.scale[0]}x{args.scale[1]}")
     print(f"Overwrite: {args.overwrite}")
     print(f"Dry run: {args.dryrun}")
     
