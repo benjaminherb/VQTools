@@ -49,7 +49,7 @@ vqcheck -m lpips -d /path/to/distorted -r /path/to/references/ -o ./results/
 | PSNR | FR | `psnr` | | Faster way to just calculate PSNR|
 | VMAF | FR | `vmaf` `vmaf4k` `vmaf-full` `vmaf4k-full` | [VMAF](https://github.com/Netflix/vmaf) | Always includes SSIM/MS-SSIM and PSNR; `full` variants additionally include the NEG (no-enhancement gain) variants (slower).|
 | LPIPS |FR| `lpips` | [PerceptualSimilarity](https://github.com/richzhang/PerceptualSimilarity) | [Paper](https://arxiv.org/abs/1801.03924) - frame-wise metric, uses `alex` as network |
-| PyIQA | FR/NR | `musiq`, `brisque`, `niqe` | [IQA-Pytorch](https://github.com/chaofengc/IQA-PyTorch) | [Musiq](https://arxiv.org/abs/2108.05997) - [BRISQUE](https://ieeexplore.ieee.org/document/6272356) — [NIQE](https://live.ece.utexas.edu/research/Quality/niqe_spl.pdf) - image quality metrics provided as mean and per-frame scores (sampled at 2 per second). |
+| PyIQA | FR/NR | `musiq`, `brisque`, `niqe`,  `dists`, `clipiqa`, `clipiqa+`| [IQA-Pytorch](https://github.com/chaofengc/IQA-PyTorch) | [Musiq](https://arxiv.org/abs/2108.05997) - [BRISQUE](https://ieeexplore.ieee.org/document/6272356) — [NIQE](https://live.ece.utexas.edu/research/Quality/niqe_spl.pdf) = [DISTS](https://arxiv.org/abs/2004.07728) - [CLIP-IQA(+)](https://arxiv.org/abs/2207.12396) - image quality metrics provided as mean and per-frame scores (sampled at 2 per second). |
 | CVQA | FR/NR | `cvqa-nr` `cvqa-nr-ms` `cvqa-fr` `cvqa-fr-ms` | [CompressedVQA](https://github.com/sunwei925/CompressedVQA) | [Paper](https://arxiv.org/abs/2106.01111) |
 | FastVQA |NR| `fastvqa` `fastervqa`| [FAST-VQA/FasterVQA](https://github.com/VQAssessment/FAST-VQA-and-FasterVQA) | [Paper](https://arxiv.org/abs/2210.05357) |
 | UVQ |NR| `uvq` | [UVQ](https://github.com/google/uvq) | [Paper](https://openaccess.thecvf.com/content/CVPR2021/html/Wang_Rich_Features_for_Perceptual_Quality_Assessment_of_UGC_Videos_CVPR_2021_paper.html) - separate and combined scores for compression, distortion and content|
@@ -85,6 +85,7 @@ Options:
 - `-i/--input` — input directory containing video files (required)
 - `-o/--output` — output directory for converted files (required)
 - `--codec` — one of `ffvhuff` or `h265` (default: `h265`)
+- `--scale` - scale videos to specified WIDTH and HEIGHT (e.g., --scale 1920 1080) 
 - `--overwrite` — overwrite existing files in the output directory
 - `--dryrun` — show ffmpeg commands without executing them
 
@@ -108,7 +109,17 @@ Example:
 aggmet -m ./metrics -o consolidated.json
 ```
 
+### metaex
+Extract metadata from video files using ffprobe. The info is stored in a `*.meta.json` file.
 
+Options
+- `--input_dir, -i` - Input folder with media files
+- `--output_dir, -o` - Output folder to write per-file metadata JSON
+- `--recursive, -r` - Recurse into subdirectories
+
+```bash
+metaex -i ./pvs -o ./meta
+```
 
 ## License and attribution
 
