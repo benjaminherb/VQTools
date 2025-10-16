@@ -7,8 +7,8 @@ VIDEO_EXTENSIONS = ['.mkv', '.mp4', '.mov', '.avi', '.m4v', '.wmv', '.yuv', '.y4
 
 def transcode(args):
     """Convert all video files to a specified codec"""
-    input_path = Path(args.input_dir)
-    output_path = Path(args.output_dir)
+    input_path = Path(args.input)
+    output_path = Path(args.output)
     output_path.mkdir(parents=True, exist_ok=True)
     input_is_raw = all([args.input_resolution, args.input_framerate, args.input_pixel_format])
 
