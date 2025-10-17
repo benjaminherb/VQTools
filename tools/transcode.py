@@ -12,8 +12,11 @@ def transcode(args):
     output_path.mkdir(parents=True, exist_ok=True)
     input_is_raw = all([args.input_resolution, args.input_framerate, args.input_pixel_format])
 
-    video_files = list(input_path.glob('*'))
-    video_files = [f for f in video_files if f.suffix in VIDEO_EXTENSIONS and not f.name.startswith('.')]
+    if input_path.is_file() and input_path.suffix in VIDEO_EXTENSIONS:
+        video_files = [input_path]
+    else:
+        video_files = list(input_path.glob('*'))
+        video_files = [f for f in video_files if f.suffix in VIDEO_EXTENSIONS and not f.name.startswith('.')]
 
     if not video_files:
         print(f"No video files found in '{input_path}'")
@@ -47,8 +50,10 @@ def transcode(args):
             cmd.extend(['-c:v', 'libx265', '-x265-params', 'lossless=1'])
         elif args.codec == 'ffvhuff':
             cmd.extend(['-c:v', 'ffvhuff'])
+        elif args.codec == 'ffv1':
+            cmd.extend(['-c:v', 'ffv1', '-level', '3', '-slicecrc', '1'])
         else:
-            raise ValueError(f"Codec '{args.codec}' not implemented. Supported codecs: h265, ffvhuff")
+            raise ValueError(f"Codec '{args.codec}' not implemented. Supported codecs: h265, ffvhuff, ffv1")
 
         if args.scale is not None:
             width, height = args.scale
@@ -81,7 +86,7 @@ def main():
     parser = argparse.ArgumentParser(description='Convert video files to standardized format (lossless)')
     parser.add_argument('-i', '--input', required=True, help='Input directory containing video files')
     parser.add_argument('-o', '--output', required=True, help='Output directory for converted files')
-    parser.add_argument('--codec', choices=['ffvhuff', 'h265'], default='h265', 
+    parser.add_argument('-c', '--codec', choices=['ffvhuff', 'h265', 'ffv1'], default='h265', 
                         help='Video codec to use (default: h265)')
     parser.add_argument('--scale', type=int, nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Scale videos to specified WIDTH and HEIGHT (e.g., --scale 1920 1080)')
     parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files')
@@ -96,8 +101,8 @@ def main():
         parser.error("When specifying input format options (for raw input), all of --input_resolution, --input_framerate, and --input_pixel_format must be provided.")
     
     input_path = Path(args.input)
-    if not input_path.exists() or not input_path.is_dir():
-        print(f"Error: Input directory '{input_path}' is not a directory or does not exist.")
+    if not input_path.exists() or (not input_path.is_dir() and not input_path.is_file()):
+        print(f"Error: Input '{input_path}' does not exist.")
         return 1
     
     print(f"Input directory: {args.input}")
@@ -110,7 +115,9 @@ def main():
     
     success_count = transcode(args)
 
-    total_files = len([f for f in list(input_path.glob('*')) if f.suffix in VIDEO_EXTENSIONS and not f.name.startswith('.')])
+    total_files = 1
+    if input_path.is_dir():
+        total_files = len([f for f in list(input_path.glob('*')) if f.suffix in VIDEO_EXTENSIONS and not f.name.startswith('.')])
     print(f"\nConversion complete: {success_count}/{total_files} successful")
     
     return 0 if success_count == total_files else 1
