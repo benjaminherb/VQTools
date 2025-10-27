@@ -80,6 +80,7 @@ metric_configs = {
     'cvqa-nr-ms': [('cvqa-nr-ms', lambda x: x['score'])],
     'cvqa-fr': [('cvqa-fr', lambda x: x['score'])],
     'cvqa-fr-ms': [('cvqa-fr-ms', lambda x: x['score'])],
+    'p12043': [('p12043', lambda x: x['per_sequence'])],
     'p12044': [('p12044', lambda x: x['score'])],
 }
 
