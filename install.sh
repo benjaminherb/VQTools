@@ -6,6 +6,43 @@ BIN_DIR="$HOME/.local/bin"
 
 echo "Installing VQTools"
 
+PYTHON_BIN=""
+COMPAT_MODE=0
+REBUILD=0
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --compatibility)
+            COMPAT_MODE=1
+            shift
+            ;;
+        --rebuild)
+            REBUILD=1
+            shift
+            ;;
+        --) # end of options
+            shift
+            break
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+if [ "$COMPAT_MODE" -eq 1 ]; then
+    PYTHON_BIN="python3.10"
+else
+    PYTHON_BIN="python3.12"
+fi
+
+echo "Using python interpreter: $PYTHON_BIN"
+if [ "$COMPAT_MODE" -eq 1 ]; then
+    echo "Compatibility mode enabled: using a lower Python (if available)"
+fi
+if [ "$REBUILD" -eq 1 ]; then
+    echo "Rebuild requested: existing virtual environment (if any) will be recreated"
+fi
+
 create_wrapper_script() {
     local tool_name="$1"
     local script_name="${tool_name%.py}"  # Remove .py
@@ -37,9 +74,14 @@ cp ./requirements.txt "${SHARE_DIR}/"
 cd "$SHARE_DIR"
 
 # Check if venv exists
+if [ "$REBUILD" -eq 1 ] && [ -d "vqenv" ]; then
+    echo "Rebuild requested: removing existing venv 'vqenv'"
+    rm -rf vqenv
+fi
+
 if [ ! -d "vqenv" ]; then
     echo "# Creating virtual environment and installing requirements"
-    python3.12 -m venv vqenv
+    "$PYTHON_BIN" -m venv vqenv
     source vqenv/bin/activate
     pip install -r requirements.txt
 
