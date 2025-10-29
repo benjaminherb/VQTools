@@ -1,6 +1,5 @@
 import os
 import argparse
-from metrics import run_lpips, run_ffmpeg, run_cvqa, run_dover, check_dover, run_cover, check_cover, check_cvqa, run_uvq, check_uvq, run_maxvqa, check_maxvqa, run_pyiqa, check_pyiqa, run_fastvqa, check_fastvqa, check_qalign, run_qalign
 from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet_mode, print_line
 
 MODES = {
@@ -24,34 +23,42 @@ AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
 def check_model_availability(mode, rebuild=False):
     if mode in MODES['dover']:
+        from metrics.dover import check_dover
         if not check_dover():
             return False
 
     if mode in MODES['cover']:
+        from metrics.cover import check_cover
         if not check_cover():
             return False
 
     if mode in MODES['cvqa']:
+        from metrics.cvqa import check_cvqa
         if not check_cvqa():
             return False
 
     if mode in MODES['uvq']:
+        from metrics.uvq import check_uvq
         if not check_uvq():
             return False
 
     if mode in MODES['maxvqa']:
+        from metrics.maxvqa import check_maxvqa
         if not check_maxvqa():
             return False
 
     if mode in MODES['pyiqa']:
+        from metrics.pyiqa import check_pyiqa
         if not check_pyiqa(mode):
             return False
     
     if mode in MODES['fastvqa']:
+        from metrics.fastvqa import check_fastvqa
         if not check_fastvqa():
             return False
 
     if mode in MODES['qalign']:
+        from metrics.qalign import check_qalign
         if not check_qalign(rebuild=rebuild):
             return False
 
@@ -133,24 +140,34 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
             return properties_match, None
 
     if mode in MODES['ffmpeg']:
+        from metrics.ffmpeg import run_ffmpeg
         return properties_match, run_ffmpeg(mode, distorted, reference, scale, output_dir)
     elif mode in MODES['cvqa']:
+        from metrics.cvqa import run_cvqa
         return properties_match, run_cvqa(mode, distorted, reference, output_dir)
     elif mode in MODES['lpips']:
+        from metrics.lpips import run_lpips
         return properties_match, run_lpips(mode, distorted, reference, output_dir)
     elif mode in MODES['dover']:
+        from metrics.dover import run_dover
         return properties_match, run_dover(mode, distorted, output_dir)
     elif mode in MODES['cover']:
+        from metrics.cover import run_cover
         return properties_match, run_cover(mode, distorted, output_dir)
     elif mode in MODES['uvq']:
+        from metrics.uvq import run_uvq
         return properties_match, run_uvq(mode, distorted, output_dir)
     elif mode in MODES['maxvqa']:
+        from metrics.maxvqa import run_maxvqa
         return properties_match, run_maxvqa(mode, distorted, reference, output_dir)
     elif mode in MODES['pyiqa']:
+        from metrics.pyiqa import run_pyiqa
         return properties_match, run_pyiqa(mode, distorted, reference, output_dir)
     elif mode in MODES['fastvqa']:
+        from metrics.fastvqa import run_fastvqa
         return properties_match, run_fastvqa(mode, distorted, output_dir)
     elif mode in MODES['qalign']:
+        from metrics.qalign import run_qalign
         return properties_match, run_qalign(mode, distorted, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")

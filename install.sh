@@ -48,7 +48,7 @@ create_wrapper_script() {
     local script_name="${tool_name%.py}"  # Remove .py
     # This works for both venv and conda envs created with -p (they both have a bin/python).
     printf '%s
-' "#!/bin/bash" "" "WORKING_PATH=\"\$(pwd)\"" "SHARE_DIR=\"$HOME/.local/share/vqtools\"" "" "PYTHON_BIN=\"\$SHARE_DIR/vqenv/bin/python\"" "" "cd \"\$WORKING_PATH\"" "export PYTHONPATH=\"\$SHARE_DIR:\\$PYTHONPATH\"" "" "\"\$PYTHON_BIN\" \"\$SHARE_DIR/tools/$tool_name\" \"\$@\"" > "$BIN_DIR/$script_name"
+' "#!/bin/bash" "" "WORKING_PATH=\"\$(pwd)\"" "SHARE_DIR=\"$HOME/.local/share/vqtools\"" "" "PYTHON_BIN=\"\$SHARE_DIR/vqenv/bin/python\"" "" "cd \"\$WORKING_PATH\"" "export PYTHONPATH=\"\$SHARE_DIR:\$PYTHONPATH\"" "" "\"\$PYTHON_BIN\" \"\$SHARE_DIR/tools/$tool_name\" \"\$@\"" > "$BIN_DIR/$script_name"
     chmod +x "$BIN_DIR/$script_name"
 }
 
@@ -75,10 +75,10 @@ if [ ! -d "vqenv" ]; then
         if command -v conda >/dev/null 2>&1; then
             echo "Creating conda environment at ./vqenv with python=3.10"
             conda create -y -p vqenv python=3.10
-            if [ -f "vqenv/bin/activate" ]; then
-                source vqenv/bin/activate
-            fi
+            conda env activate ./vqenv
             pip install -r requirements.txt
+            pip install torch==2.0.1 torchvision --index-url https://download.pytorch.org/whl/cu117
+            pip install numpy opencv-python lpips pyiqa
         else
             echo "Compatibility mode requested but 'conda' was not found on PATH. Please install conda (Miniconda/Anaconda) or run without --compatibility."
             exit 1
@@ -91,7 +91,6 @@ if [ ! -d "vqenv" ]; then
 else
     echo "# Virtual environment already exists, activating"
     if [ -f "vqenv/bin/activate" ]; then
-        # shellcheck disable=SC1091
         source vqenv/bin/activate
     fi
     pip install -r requirements.txt
