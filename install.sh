@@ -79,6 +79,7 @@ if [ ! -d "vqenv" ]; then
             pip install -r requirements.txt
             pip install torch==2.0.1 torchvision --index-url https://download.pytorch.org/whl/cu117
             pip install numpy opencv-python lpips pyiqa
+            conda install ffmpeg=7 -y
         else
             echo "Compatibility mode requested but 'conda' was not found on PATH. Please install conda (Miniconda/Anaconda) or run without --compatibility."
             exit 1
