@@ -46,20 +46,10 @@ fi
 create_wrapper_script() {
     local tool_name="$1"
     local script_name="${tool_name%.py}"  # Remove .py
-    
-    cat << EOF
-#!/bin/bash
-
-WORKING_PATH="\$(pwd)"
-SHARE_DIR="$HOME/.local/share/vqtools"
-
-cd "\$SHARE_DIR"
-source vqenv/bin/activate
-export PYTHONPATH="\$SHARE_DIR:\$PYTHONPATH"
-
-cd "\$WORKING_PATH"
-python "\$SHARE_DIR/tools/$tool_name" "\$@"
-EOF
+    # This works for both venv and conda envs created with -p (they both have a bin/python).
+    printf '%s
+' "#!/bin/bash" "" "WORKING_PATH=\"\$(pwd)\"" "SHARE_DIR=\"$HOME/.local/share/vqtools\"" "" "PYTHON_BIN=\"\$SHARE_DIR/vqenv/bin/python\"" "" "cd \"\$WORKING_PATH\"" "export PYTHONPATH=\"\$SHARE_DIR:\\$PYTHONPATH\"" "" "\"\$PYTHON_BIN\" \"\$SHARE_DIR/tools/$tool_name\" \"\$@\"" > "$BIN_DIR/$script_name"
+    chmod +x "$BIN_DIR/$script_name"
 }
 
 echo "# Creating directories"
@@ -80,15 +70,30 @@ if [ "$REBUILD" -eq 1 ] && [ -d "vqenv" ]; then
 fi
 
 if [ ! -d "vqenv" ]; then
-    echo "# Creating virtual environment and installing requirements"
-    "$PYTHON_BIN" -m venv vqenv
-    source vqenv/bin/activate
-    pip install -r requirements.txt
-
-
+    echo "# Creating environment and installing requirements"
+    if [ "$COMPAT_MODE" -eq 1 ]; then
+        if command -v conda >/dev/null 2>&1; then
+            echo "Creating conda environment at ./vqenv with python=3.10"
+            conda create -y -p vqenv python=3.10
+            if [ -f "vqenv/bin/activate" ]; then
+                source vqenv/bin/activate
+            fi
+            pip install -r requirements.txt
+        else
+            echo "Compatibility mode requested but 'conda' was not found on PATH. Please install conda (Miniconda/Anaconda) or run without --compatibility."
+            exit 1
+        fi
+    else
+        "$PYTHON_BIN" -m venv vqenv || exit
+        source vqenv/bin/activate
+        pip install -r requirements.txt
+    fi
 else
     echo "# Virtual environment already exists, activating"
-    source vqenv/bin/activate
+    if [ -f "vqenv/bin/activate" ]; then
+        # shellcheck disable=SC1091
+        source vqenv/bin/activate
+    fi
     pip install -r requirements.txt
 fi
 
@@ -132,8 +137,8 @@ for tool_path in "${TOOLS[@]}"; do
     wrapper_path="${BIN_DIR}/${script_name}"
     
     echo "# Creating wrapper for ${script_name}"
-    create_wrapper_script "$tool_name" > "$wrapper_path"
-    chmod +x "$wrapper_path"
+    create_wrapper_script "$tool_name"
+    chmod +x "$BIN_DIR/$script_name"
 done
 
 echo "# Installation complete!"
