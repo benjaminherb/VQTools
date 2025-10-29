@@ -71,19 +71,29 @@ def get_video_info(video_path):
 
 ## ------ Virtual Environment ------ ##
 
+def _use_conda():
+    if os.path.exists(os.path.join(sys.prefix, 'conda-meta')):
+        return True
+    return False
 
 def create_venv(venv_path, python='python3.12', requirements=None, compile_decord=False):
     """Create a virtual environment at the specified path."""
     try:
         # check if python version exists
-        result = subprocess.run([python, '--version'], capture_output=True, text=True)
-        if result.returncode != 0:
-            raise FileNotFoundError(f"Python version {python} not found, please install it.")
+        if _use_conda():
+            result = subprocess.run(['conda', 'create', '-y', '-p', venv_path, f'python={python}'], check=True)
+            if result.returncode != 0:
+                print_line(f"ERROR: Failed to create conda environment at {venv_path}", force=True)
+                return False
+        else:
+            result = subprocess.run([python, '--version'], capture_output=True, text=True)
+            if result.returncode != 0:
+                raise FileNotFoundError(f"Python version {python} not found, please install it.")
 
-        result = subprocess.run([python, '-m', 'venv', venv_path], check=True)
-        if result.returncode != 0:
-            print_line(f"ERROR: Failed to create virtual environment at {venv_path}", force=True)
-            return False
+            result = subprocess.run([python, '-m', 'venv', venv_path], check=True)
+            if result.returncode != 0:
+                print_line(f"ERROR: Failed to create virtual environment at {venv_path}", force=True)
+                return False
 
         if compile_decord:
             # on MacOS we need to compile decord from source
@@ -116,8 +126,14 @@ def run_in_venv(venv_path, command, work_dir=None):
         work_dir = os.getcwd()
     
     env = os.environ.copy()
-    env['VIRTUAL_ENV'] = venv_path
-    env['PATH'] = f"{os.path.join(venv_path, 'bin')}:{env.get('PATH', '')}"
+
+    if _use_conda():
+        conda_prefix = os.path.abspath(venv_path)
+        env['CONDA_PREFIX'] = conda_prefix
+        env['PATH'] = f"{os.path.join(conda_prefix, 'bin')}:{env.get('PATH', '')}"
+    else:
+        env['VIRTUAL_ENV'] = venv_path
+        env['PATH'] = f"{os.path.join(venv_path, 'bin')}:{env.get('PATH', '')}"
     
     try:
         result = subprocess.run(command, capture_output=True, text=True, cwd=str(work_dir), env=env)
