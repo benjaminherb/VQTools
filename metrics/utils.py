@@ -81,7 +81,7 @@ def create_venv(venv_path, python='python3.12', requirements=None, compile_decor
     try:
         # check if python version exists
         if _use_conda():
-            result = subprocess.run(['conda', 'create', '-y', '-p', venv_path, f'python={python}'], check=True)
+            result = subprocess.run(['conda', 'create', '-y', '-p', venv_path, f'python={python.replace("python", "")}'], check=True)
             if result.returncode != 0:
                 print_line(f"ERROR: Failed to create conda environment at {venv_path}", force=True)
                 return False
