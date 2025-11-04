@@ -7,6 +7,7 @@ from tqdm import tqdm
 metric_configs = {
     # metric name (*.name.json), output key in final json, extractor functions to get the value from loaded json
     'vmaf':[('vmaf', lambda x: x['pooled_metrics']['vmaf']['mean']),
+            ('vmaf', lambda x: x['pooled_metrics']['vmaf_4k']['mean']),
             ('vmaf-neg', lambda x: x['pooled_metrics']['vmaf_neg']['mean']),
             ('vif-scale0', lambda x: x['pooled_metrics']['integer_vif_scale0']['mean']),
             ('vif-scale0-egl', lambda x: x['pooled_metrics']['integer_vif_scale0_egl_1']['mean']),
@@ -32,9 +33,14 @@ metric_configs = {
             ('psnr-cb', lambda x: x['pooled_metrics']['psnr_cb']['mean']),
             ('psnr-cr', lambda x: x['pooled_metrics']['psnr_cr']['mean']),
             ('psnr-hvs', lambda x: x['pooled_metrics']['psnr_hvs']['mean'])],
+    'avqbitsm0': [('avqbitsm0', lambda x: x["per_sequence"])],
+    'avqbitsm1': [('avqbitsm1', lambda x: x["per_sequence"])],
     'avqbitsh0f': [('avqbitsh0f', lambda x: x["per_sequence"])],
     'lpips': [('lpips', lambda x: x["metadata"]['mean_distance'])],
-    'dover': [('dover', lambda x: x["fused_score"]),
+    'dover': [('dover', lambda x: x["dover"]),
+              ('dover_aesthetic', lambda x: x["cover_res_0"]),
+              ('dover_technical', lambda x: x["cover_res_1"]),
+              ('dover', lambda x: x["fused_score"]),
               ('dover_aesthetic', lambda x: x["aesthetic_score"]),
               ('dover_technical', lambda x: x["technical_score"])],
     'cover': [('cover', lambda x: x['fused_score']),
@@ -66,7 +72,8 @@ metric_configs = {
             ('uvq_compression_distortion', lambda x: x['compression_distortion']),
             ('uvq_content_distortion', lambda x: x['content_distortion'])],
     'fastvqa': [('fastvqa', lambda x: x['score'])],
-    'fastervqa': [('fastervqa', lambda x: x['score'])],
+    'fastervqa': [('fastervqa', lambda x: x['fastervqa_score']),
+                  ('fastervqa', lambda x: x['score'])],
     'brisque': [('brisque', lambda x: x['mean_score'])],
     'niqe': [('niqe', lambda x: x['mean_score'])],
     'clipiqa': [('clipiqa', lambda x: x['mean_score'])],
@@ -74,6 +81,7 @@ metric_configs = {
     'dists': [('dists', lambda x: x['mean_score'])],
     'musiq': [('musiq', lambda x: x['mean_musiq']),
               ('musiq', lambda x: x['mean_score'])],
+    'vila': [('vila', lambda x: x['mean_vila'])],
     'qalign': [('qalign', lambda x: x['qalign_score']),
                ('qalign', lambda x: x['score'])],
     'cvqa-nr': [('cvqa-nr', lambda x: x['score'])],
@@ -82,6 +90,8 @@ metric_configs = {
     'cvqa-fr-ms': [('cvqa-fr-ms', lambda x: x['score'])],
     'p12043': [('p12043', lambda x: x['per_sequence'])],
     'p12044': [('p12044', lambda x: x['score'])],
+    'siti': [('si', lambda x: x['aggregated_statistics']['si']['mean']),
+             ('ti', lambda x: x['aggregated_statistics']['ti']['mean'])],
 }
 
 def parse_arguments():
@@ -178,6 +188,8 @@ def main():
             for config_item in config:
                 output_key, extractor = config_item
                 try:
+                    if output_key in entry and entry[output_key] is not None:
+                        continue  # Skip if already exists
                     extracted_value = extractor(data)
                     entry[output_key] = extracted_value
                 except (KeyError, TypeError):
