@@ -16,7 +16,7 @@ MODES = {
     'check': ['check']
 
 }
-FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'check', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists']
+FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists']
 NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
@@ -127,7 +127,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
         if mode == 'check':
             return properties_match, None
         
-        elif not properties_match and 'vmaf' or 'psnr' in mode:
+        elif not properties_match and ('vmaf' or 'psnr' in mode):
             ref_info = get_video_info(reference)
             dis_info = get_video_info(distorted)
             if ref_info is not None and dis_info is not None and (ref_info['width'] != dis_info['width'] or ref_info['height'] != dis_info['height']):
