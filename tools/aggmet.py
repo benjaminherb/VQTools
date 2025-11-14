@@ -92,6 +92,7 @@ metric_configs = {
     'p12044': [('p12044', lambda x: x['score'])],
     'siti': [('si', lambda x: x['aggregated_statistics']['si']['mean']),
              ('ti', lambda x: x['aggregated_statistics']['ti']['mean'])],
+    'clip': [('clip', lambda x: x['clip'][0])]
 }
 
 def parse_arguments():
@@ -168,7 +169,7 @@ def main():
         if 'meta' in metrics:
             metadata = load_json_if_exists(metrics['meta'])
             for key, value in metadata.items():
-                if key in ('bitrate', 'bpp', 'bit_depth', 'fps', 'frames', 'filesize', 'encoding_time', 'encoding_speed'):
+                if key in ('bitrate', 'bit_rate',  'bpp', 'bit_depth', 'fps', 'frame_rate', 'framerate', 'frames', 'filesize', 'encoding_time', 'encoding_speed'):
                     consolidated_data[base_name][key] = value
                 if key == 'upscaling':
                     print('upscaling metadata:', value)
