@@ -105,9 +105,10 @@ def run_ffprobe(path: Path, extrac_frame_data: bool=False) -> dict:
     data = {"file": path.name, "name": path.stem}
     raw_data = json.loads(proc.stdout)
     if "streams" in raw_data:
-        key_map = {"width": "width", "height": "height", "r_frame_rate": "framerate", 
-                   "pix_fmt": "pixel_format", "bits_per_raw_sample": "bit_depth", 
-                   "color_range": "color_range", "codec_name": "codec"}
+        key_map = {"width": "width", "height": "height", "r_frame_rate": "framerate",  "pix_fmt": "pixel_format", 
+                   "color_space": "color_space", "color_transfer": "color_transfer", "color_primaries": "color_primaries", 
+                   "bits_per_raw_sample": "bit_depth", "color_range": "color_range", 
+                   "codec_name": "codec", "codec_long_name": "codec_name", "profile": "profile"}
         for k, v in key_map.items():
             if k in raw_data["streams"][0]:
                 data[v] = raw_data["streams"][0][k] 
