@@ -30,6 +30,8 @@ def transcode(args):
 
     for i, video_file in enumerate(video_files):
         output_file = output_path / f"{video_file.stem}.mkv"
+        if args.codec == 'preview':
+            output_file = output_path / f"{video_file.stem}.mp4"
         print(f"\nTask {i+1}/{len(video_files)}")
 
         if output_file.exists() and not args.overwrite:
