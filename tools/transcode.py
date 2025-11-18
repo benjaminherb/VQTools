@@ -28,11 +28,12 @@ def transcode(args):
     
     success_count = 0
 
-    for video_file in video_files:
+    for i, video_file in enumerate(i, video_files):
         output_file = output_path / f"{video_file.stem}.mkv"
+        print(f"\nTask {i+1}/{len(video_files)}")
 
         if output_file.exists() and not args.overwrite:
-            print(f"Skipping: {video_file.name} (already exists, use --overwrite to replace)")
+            print(f"Skipping:   {video_file.name} (already exists, use --overwrite to replace)")
             continue
         
         cmd = ['ffmpeg', '-i', str(video_file)]
@@ -53,7 +54,7 @@ def transcode(args):
         elif args.codec == 'ffv1':
             cmd.extend(['-c:v', 'ffv1', '-level', '3', '-slicecrc', '1'])
         elif args.codec == 'preview':
-            cmd.extend(['-c:v', 'libx264', '-crf', '24'])
+            cmd.extend(['-c:v', 'libx264', '-crf', '26', '-preset', 'fast'])
         else:
             raise ValueError(f"Codec '{args.codec}' not implemented. Supported codecs: h265, ffvhuff, ffv1")
 
@@ -66,8 +67,8 @@ def transcode(args):
             '-y', str(output_file)
         ])
         
-        print(f"\nConverting: {video_file.name}")
-        print(f"Command: {' '.join(cmd)}")
+        print(f"Converting: {video_file.name}")
+        print(f"Command:    {' '.join(cmd)}")
         
         if not args.dryrun:
             try:
@@ -107,13 +108,14 @@ def main():
         print(f"Error: Input '{input_path}' does not exist.")
         return 1
     
-    print(f"Input directory: {args.input}")
-    print(f"Output directory: {args.output}")
-    print(f"Codec: {args.codec}")
+    print(f"Input:     {args.input}")
+    print(f"Output:    {args.output}")
+    print(f"Codec:     {args.codec}")
     if args.scale:
-        print(f"Scale: {args.scale[0]}x{args.scale[1]}")
+        print(f"Scale:     {args.scale[0]}x{args.scale[1]}")
     print(f"Overwrite: {args.overwrite}")
-    print(f"Dry run: {args.dryrun}")
+    print(f"Dry run:   {args.dryrun}")
+    print()
     
     success_count = transcode(args)
 
