@@ -28,7 +28,7 @@ def transcode(args):
     
     success_count = 0
 
-    for i, video_file in enumerate(i, video_files):
+    for i, video_file in enumerate(video_files):
         output_file = output_path / f"{video_file.stem}.mkv"
         print(f"\nTask {i+1}/{len(video_files)}")
 
