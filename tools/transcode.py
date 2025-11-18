@@ -52,6 +52,8 @@ def transcode(args):
             cmd.extend(['-c:v', 'ffvhuff'])
         elif args.codec == 'ffv1':
             cmd.extend(['-c:v', 'ffv1', '-level', '3', '-slicecrc', '1'])
+        elif args.codec == 'preview':
+            cmd.extend(['-c:v', 'libx264', '-crf', '24'])
         else:
             raise ValueError(f"Codec '{args.codec}' not implemented. Supported codecs: h265, ffvhuff, ffv1")
 
@@ -86,8 +88,8 @@ def main():
     parser = argparse.ArgumentParser(description='Convert video files to standardized format (lossless)')
     parser.add_argument('-i', '--input', required=True, help='Input directory containing video files')
     parser.add_argument('-o', '--output', required=True, help='Output directory for converted files')
-    parser.add_argument('-c', '--codec', choices=['ffvhuff', 'h265', 'ffv1'], default='h265', 
-                        help='Video codec to use (default: h265)')
+    parser.add_argument('-c', '--codec', choices=['ffvhuff', 'h265', 'ffv1', 'preview'], default='ffv1', 
+                        help='Video codec to use (default: ffv1)')
     parser.add_argument('--scale', type=int, nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Scale videos to specified WIDTH and HEIGHT (e.g., --scale 1920 1080)')
     parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files')
     parser.add_argument('--input_resolution', '-ir', nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Input resolution for raw video files')
