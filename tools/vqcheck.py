@@ -82,6 +82,7 @@ def compare_video_properties(reference, distorted):
     print_line(f"{'Pixel format':<13} {ref_info['pix_fmt']:<14} {dist_info['pix_fmt']:<14}")
     print_line(f"{'Color range':<13} {ref_info['color_range']:<14} {dist_info['color_range']:<14}")
     print_line(f"{'File size':<13} {format_file_size(ref_info['file_size']):<14} {format_file_size(dist_info['file_size']):<14}")
+    print_line(f"{'Timebase':<13} {ref_info['timebase']:<14} {dist_info['timebase']:<14}")
         
     messages = [] 
     if ref_info['width'] != dist_info['width'] or ref_info['height'] != dist_info['height']:
@@ -99,7 +100,9 @@ def compare_video_properties(reference, distorted):
     
     if ref_info['pix_fmt'] != dist_info['pix_fmt']:
         messages.append(("WARNING", "Pixel format mismatch"))
-
+    
+    if ref_info['timebase'] != dist_info['timebase']:
+        messages.append(("ERROR", "Timebase mismatch"))
     
     has_errors = any(level == "ERROR" for level, _ in messages)
     has_warnings = any(level == "WARNING" for level, _ in messages)
@@ -121,6 +124,7 @@ def compare_video_properties(reference, distorted):
 def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True):
     properties_match = True
     scale = None
+    reference_fps = None # for vmaf
     if mode in FR_MODES and reference is not None:
         properties_match = compare_video_properties(reference, distorted)
 
@@ -130,18 +134,24 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
         elif not properties_match and ('vmaf' or 'psnr' in mode):
             ref_info = get_video_info(reference)
             dis_info = get_video_info(distorted)
-            if ref_info is not None and dis_info is not None and (ref_info['width'] != dis_info['width'] or ref_info['height'] != dis_info['height']):
+
+            if ref_info is None or dis_info is None:
+                return properties_match, None
+
+            if (ref_info['width'] != dis_info['width'] or ref_info['height'] != dis_info['height']):
                 scale = (ref_info['width'], ref_info['height'])
                 print_line(f"Scaling distorted video to {scale[0]}x{scale[1]} for analysis", force=True)
-            else: 
-                return properties_match, None 
+            
+            if ref_info['timebase'] != dis_info['timebase']:
+                reference_fps = ref_info['fps']
+                print_line(f"Forcing (ref) FPS to avoid timebase issue", force=True)
 
         elif not properties_match:
             return properties_match, None
 
     if mode in MODES['ffmpeg']:
         from metrics.ffmpeg import run_ffmpeg
-        return properties_match, run_ffmpeg(mode, distorted, reference, scale, output_dir)
+        return properties_match, run_ffmpeg(mode, distorted, reference, scale, reference_fps, output_dir)
     elif mode in MODES['cvqa']:
         from metrics.cvqa import run_cvqa
         return properties_match, run_cvqa(mode, distorted, reference, output_dir)
@@ -250,7 +260,7 @@ def main():
         if reference:
             print_key_value("Reference", reference)
         properties_match, results = run_analysis(args.mode, distorted, reference, output_dir)
-        if not properties_match:
+        if not properties_match and results is None:
             print_line("SKIPPED (property mismatch)", force=True)
         print_separator()
 

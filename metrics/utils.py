@@ -58,7 +58,8 @@ def get_video_info(video_path):
             'color_range': stream.get('color_range', 'unknown'),
             'file_size': int(format_info.get('size', 0)),
             'frame_count': frame_count,
-            'duration': duration
+            'duration': duration,
+            'timebase': stream.get('time_base', 'unknown')
         }
         
     except subprocess.CalledProcessError as e:

@@ -7,7 +7,7 @@ import json
 from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line
 
 
-def run_ffmpeg(mode, distorted, reference, scale=None, output_dir=None):
+def run_ffmpeg(mode, distorted, reference, scale=None, fps=None, output_dir=None):
 
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
@@ -25,7 +25,7 @@ def run_ffmpeg(mode, distorted, reference, scale=None, output_dir=None):
         'ffmpeg',
         '-i', distorted,
         '-i', reference,  
-        '-lavfi', get_lavfi(mode, output_file, scale=scale),
+        '-lavfi', get_lavfi(mode, output_file, scale=scale, fps=fps),
         '-f', 'null',
         '-'
     ]
@@ -83,10 +83,13 @@ def run_ffmpeg(mode, distorted, reference, scale=None, output_dir=None):
         return None
 
 
-def get_lavfi(mode, output_file, scale=None):
+def get_lavfi(mode, output_file, scale=None, fps=None):
     mode = mode.lower()
     lavfi = ''
     prestring = f'[0:v]setpts=PTS-STARTPTS[distorted];[1:v]setpts=PTS-STARTPTS[reference];[distorted][reference]'
+    if fps is not None: # force framerate as timebase mismatches can cause issues (eg with .mkv)
+        prestring = f'[0:v]fps={fps},setpts=PTS-STARTPTS[distorted];[1:v]fps={fps},setpts=PTS-STARTPTS[reference];[distorted][reference]'
+
     if scale is not None:
         prestring = f'[0:v]scale={scale[0]}:{scale[1]}:flags=bicubic,setpts=PTS-STARTPTS[distorted];[1:v]setpts=PTS-STARTPTS[reference];[distorted][reference]'
 
