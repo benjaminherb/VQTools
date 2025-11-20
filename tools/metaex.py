@@ -105,10 +105,9 @@ def run_ffprobe(path: Path, extrac_frame_data: bool=False) -> dict:
     data = {"file": path.name, "name": path.stem}
     raw_data = json.loads(proc.stdout)
     if "streams" in raw_data:
-        key_map = {"width": "width", "height": "height", "r_frame_rate": "framerate",  "pix_fmt": "pixel_format", 
-                   "color_space": "color_space", "color_transfer": "color_transfer", "color_primaries": "color_primaries", 
-                   "bits_per_raw_sample": "bit_depth", "color_range": "color_range", 
-                   "codec_name": "codec", "codec_long_name": "codec_name", "profile": "profile"}
+        key_map = {"width": "width", "height": "height", "r_frame_rate": "framerate", "avg_frame_rate" : "avg_framerate", "time_base": "timebase",
+                   "pix_fmt": "pixel_format", "color_space": "color_space", "color_transfer": "color_transfer", "color_primaries": "color_primaries", 
+                   "bits_per_raw_sample": "bit_depth", "color_range": "color_range", "codec_name": "codec", "codec_long_name": "codec_name", "profile": "profile"}
         for k, v in key_map.items():
             if k in raw_data["streams"][0]:
                 data[v] = raw_data["streams"][0][k] 
@@ -125,13 +124,13 @@ def run_ffprobe(path: Path, extrac_frame_data: bool=False) -> dict:
                 data[v] = raw_data["format"][k]
 
     # convert to numeric types where possible 
-    for k in ["width", "height", "duration", "filesize", "bitrate", "framerate"]:
+    for k in ["width", "height", "duration", "filesize", "bitrate", "framerate", "avg_framerate", "bit_depth"]:
         if k not in data:
             continue
         try:
             if k in ["width", "height", "filesize", "bitrate"]:
                 data[k] = int(data[k])
-            elif k == "framerate":
+            elif k in ["framerate", "avg_framerate"]:
                 data[k] = eval(data[k])
             else:
                 data[k] = float(data[k])
@@ -189,7 +188,8 @@ def write_json(output_path: Path, data: dict):
 
 def main():
     parser = argparse.ArgumentParser(description="Extract metadata from media files using ffprobe")
-    parser.add_argument("--input_path", "-i", required=True, type=Path, help="Input folder/file")
+    parser.add_argument("--input_path", "-i", required=False, type=Path, help="Input folder/file")
+    parser.add_argument("inputs", nargs="*", help="Positional input(s). (alternative to -i)")
     parser.add_argument("--output_path", "-o", type=Path, help="Output folder to write per-file metadata JSON")
     parser.add_argument("--recursive", "-r", action="store_true", help="Recurse into subdirectories")
     parser.add_argument("--frame_data", "-f", action="store_true", help="Include per-frame data in output JSON")
@@ -197,11 +197,6 @@ def main():
     args = parser.parse_args()
 
     save_to_file = args.output_path is not None
-    input_path: Path = args.input_path
-
-    if not input_path.exists():
-        print(f"Input path does not exist: {input_path}")
-        return
 
     exts = set(VIDEO_EXTS)
     if args.ext:
@@ -209,11 +204,15 @@ def main():
             exts.add(e if e.startswith(".") else f".{e}")
 
     files = []
-    input_dir = input_path.parent if input_path.is_file() else input_path
-    if input_path.is_file():
-        files = [input_path] if is_media_file(input_path, list(exts)) else []
-    elif input_path.is_dir():
-        files = list(collect_files(input_path, args.recursive, exts))
+    if args.input_path is None and getattr(args, "inputs", None): # positional inputs
+        files = [Path(p) for p in args.inputs if is_media_file(Path(p), list(exts))]
+    else:
+        input_path: Path = args.input_path
+        input_dir = input_path.parent if input_path.is_file() else input_path
+        if input_path.is_file():
+            files = [input_path] if is_media_file(input_path, list(exts)) else []
+        elif input_path.is_dir():
+            files = list(collect_files(input_path, args.recursive, exts))
 
     if not files:
         print("No media files found.")
@@ -224,9 +223,8 @@ def main():
     for p in tqdm(files, desc="Extracting metadata", disable=not save_to_file):
         try:
             data = run_ffprobe(p, args.frame_data)
-            rel = p.relative_to(input_dir)
             if save_to_file:
-                out_path = args.output_path.joinpath(rel).with_suffix(".meta.json")
+                out_path = args.output_path.joinpath(p.name).with_suffix(".meta.json")
                 write_json(out_path, data)
             else:
                 if "frames" in data:
