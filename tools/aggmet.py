@@ -103,6 +103,8 @@ def parse_arguments():
                        help='Output JSON file path for consolidated metrics')
     parser.add_argument('--existing-json', '-e', type=str, default=None,
                        help='Path to existing combined JSON file to update (optional)')
+    parser.add_argument('--exclude-keys', '-x', nargs='*', default=[],
+                       help='List of metadata keys to exclude from consolidation')
     return parser.parse_args()
 
 def load_json_if_exists(filepath):
@@ -143,7 +145,7 @@ def main():
     
     for root, dirs, files in os.walk(args.metrics_dir):
         for filename in files:
-            if not filename.endswith('.json'):
+            if not filename.endswith('.json') or filename.startswith('.'):
                 continue
             
             base_name, metric_type = extract_name_and_metric(filename)
@@ -169,11 +171,8 @@ def main():
         if 'meta' in metrics:
             metadata = load_json_if_exists(metrics['meta'])
             for key, value in metadata.items():
-                if key in ('bitrate', 'bit_rate',  'bpp', 'bit_depth', 'fps', 'frame_rate', 'framerate', 'frames', 'filesize', 'encoding_time', 'encoding_speed'):
+                if key not in args.exclude_keys:
                     consolidated_data[base_name][key] = value
-                if key == 'upscaling':
-                    print('upscaling metadata:', value)
-                    consolidated_data[base_name]['upscaling_spf'] = value['spf']
 
         entry = consolidated_data[base_name]
          
