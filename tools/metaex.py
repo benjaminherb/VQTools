@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import List
 from tqdm import tqdm
@@ -102,7 +103,7 @@ def run_ffprobe(path: Path, extrac_frame_data: bool=False) -> dict:
     if proc.returncode != 0:
         raise RuntimeError(proc.stderr.strip() or f"ffprobe failed with code {proc.returncode}")
 
-    data = {"file": path.name, "name": path.stem}
+    data = {"file": path.name, "name": path.stem, "timestamp": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(path)))}
     raw_data = json.loads(proc.stdout)
     if "streams" in raw_data:
         key_map = {"width": "width", "height": "height", "r_frame_rate": "framerate", "avg_frame_rate" : "avg_framerate", "time_base": "timebase",
