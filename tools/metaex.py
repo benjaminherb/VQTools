@@ -9,7 +9,8 @@ from tqdm import tqdm
 
 
 VIDEO_EXTS = {
-    ".mp4", ".mkv", ".mov", ".avi", ".webm", ".m4v", ".flv", ".ts", ".m2ts", ".mpeg", ".mpg"
+    ".mp4", ".mkv", ".mov", ".mxf", ".avi", ".webm", ".m4v", ".flv", ".ts", ".m2ts", ".mpeg", ".mpg", ".wmv",
+    ".yuv", ".y4m", ".raw", ".h264", ".h265", ".hevc", ".av1", ".vp9", ".vpx", ".dv", ".dpx", ".tiff", ".tif", ".exr",
 }
 
 
@@ -195,6 +196,7 @@ def main():
     parser.add_argument("--recursive", "-r", action="store_true", help="Recurse into subdirectories")
     parser.add_argument("--frame_data", "-f", action="store_true", help="Include per-frame data in output JSON")
     parser.add_argument("--ext", "-e", action="append", help="Additional extensions to include (e.g. .avi). Can be used multiple times")
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing output files")
     args = parser.parse_args()
 
     save_to_file = args.output_path is not None
@@ -206,6 +208,9 @@ def main():
 
     files = []
     if args.input_path is None and getattr(args, "inputs", None): # positional inputs
+        if len(args.inputs) == 1 and os.path.isdir(args.inputs[0]):
+            input_dir = Path(args.inputs[0])
+            files = list(collect_files(input_dir, args.recursive, list(exts)))
         files = [Path(p) for p in args.inputs if is_media_file(Path(p), list(exts))]
     else:
         input_path: Path = args.input_path
@@ -223,9 +228,13 @@ def main():
     success = []
     for p in tqdm(files, desc="Extracting metadata", disable=not save_to_file):
         try:
+            out_path = args.output_path.joinpath(p.name).with_suffix(".meta.json")
+            if save_to_file and out_path.exists() and not args.overwrite:
+                continue
+
             data = run_ffprobe(p, args.frame_data)
+
             if save_to_file:
-                out_path = args.output_path.joinpath(p.name).with_suffix(".meta.json")
                 write_json(out_path, data)
             else:
                 if "frames" in data:
