@@ -1,6 +1,6 @@
 import os
 import argparse
-from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet_mode, print_line
+from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet_mode, print_line, get_output_filename
 
 MODES = {
     'ffmpeg': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'],
@@ -122,6 +122,13 @@ def compare_video_properties(reference, distorted):
 
 
 def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True):
+    
+    if output_dir is not None:
+        output_file = get_output_filename(distorted, mode, output_dir)
+        if os.path.exists(output_file):
+            print_line(f"{output_file} exists already - SKIPPING!", force=True)
+            return True, None
+
     properties_match = True
     scale = None
     reference_fps = None # for vmaf
