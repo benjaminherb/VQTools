@@ -11,12 +11,13 @@ MODES = {
     'uvq': ['uvq'],
     'maxvqa': ['maxvqa'],
     'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists'],
+    'jpegxl': ['ssimulacra2', 'butteraugli'],
     'fastvqa': ['fastvqa', 'fastervqa'],
     'qalign': ['qalign'],
     'check': ['check']
 
 }
-FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists']
+FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli']
 NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
@@ -50,6 +51,11 @@ def check_model_availability(mode, rebuild=False):
     if mode in MODES['pyiqa']:
         from metrics.pyiqa import check_pyiqa
         if not check_pyiqa(mode):
+            return False
+    
+    if mode in MODES['jpegxl']:
+        from metrics.jpegxl import check_jpegxl
+        if not check_jpegxl(mode):
             return False
     
     if mode in MODES['fastvqa']:
@@ -180,6 +186,9 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
     elif mode in MODES['pyiqa']:
         from metrics.pyiqa import run_pyiqa
         return properties_match, run_pyiqa(mode, distorted, reference, output_dir)
+    elif mode in MODES['jpegxl']:
+        from metrics.jpegxl import run_jpegxl_metric
+        return properties_match, run_jpegxl_metric(mode, distorted, reference, output_dir)
     elif mode in MODES['fastvqa']:
         from metrics.fastvqa import run_fastvqa
         return properties_match, run_fastvqa(mode, distorted, output_dir)
