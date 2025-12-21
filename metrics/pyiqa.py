@@ -1,21 +1,17 @@
 import os
-import subprocess
-import tempfile
 from datetime import datetime
 from pathlib import Path
-import pyiqa
 import cv2
 import torch
 import numpy as np
 from statistics import mean
-import time
-import gc
 
 from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, get_video_info
 
 
 def check_pyiqa(mode):
     try:
+        import pyiqa
         metric = pyiqa.create_metric(mode, as_loss=False, device='cpu')  # download if needed
     except Exception as e:
         print_line(f"Error checking PyIQA for model {mode}: {e}", force=True)
@@ -30,6 +26,7 @@ def _preprocess_frame(frame, device):
 
 def _process_frames_streaming(video_path, reference_path, metric, device, stride=1):
     """Process frames from video one by one"""
+
     is_fr = reference_path is not None
     frame_scores = {}
     
@@ -84,6 +81,7 @@ def _process_frames_streaming(video_path, reference_path, metric, device, stride
 
 def run_pyiqa(mode, distorted, reference, output_dir=None):
     """Run PyIQA video quality assessment."""
+    import pyiqa
 
     output_file = None
     if output_dir is not None:
