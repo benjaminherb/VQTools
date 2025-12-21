@@ -198,6 +198,28 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
+def get_jobs(distorted_files, reference_files, mode, output_dir):
+    jobs = []
+    for distorted in distorted_files:
+
+        if os.path.exists(get_output_filename(distorted, mode, output_dir)):
+            continue
+
+        reference = None
+        if not reference_files:
+            reference = None
+        elif len(reference_files) == 1:
+            reference = reference_files[0]
+        elif len(reference_files) > 1:
+            reference = find_reference_file(distorted, reference_files)
+
+        if not reference and mode in FR_MODES:
+            print_line(f"ERROR: No reference file found for {distorted}", force=True)
+            continue
+        
+        jobs.append((mode, distorted, reference, output_dir))
+    
+    return jobs
 
 def main():
     
@@ -248,30 +270,22 @@ def main():
     if args.mode in NR_MODES and args.reference:
         args.reference = None # Ignore reference for NR modes
 
+    output_dir = None
+    if args.output is not None:
+        if args.output == '.':
+            output_dir = os.path.dirname(distorted)
+        else:
+            output_dir = args.output
+
     total_files = len(distorted_files)
     matching_properties = 0
     perfect_match = 0
+    jobs = get_jobs(distorted_files, reference_files, args.mode, output_dir)
+    print_key_value("Jobs", str(len(jobs)))
     
-    for distorted in distorted_files:
-        if not reference_files:
-            reference = None
-        if len(reference_files) == 1:
-            reference = reference_files[0]
-        elif len(reference_files) > 1:
-            reference = find_reference_file(distorted, reference_files)
+    for (mode, distorted, reference, output_dir) in jobs:
 
-        if not reference and args.mode in FR_MODES:
-            print_line(f"ERROR: No reference file found for {distorted}", force=True)
-            continue
-        
-        output_dir = None
-        if args.output is not None:
-            if args.output == '.':
-                output_dir = os.path.dirname(distorted)
-            else:
-                output_dir = args.output
-
-        print_separator(f"VQCheck ({args.mode})", newline=True)
+        print_separator(f"VQCheck ({mode})", newline=True)
         print_key_value("Distorted", distorted, force=True)
         if reference:
             print_key_value("Reference", reference)
