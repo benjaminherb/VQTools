@@ -5,16 +5,19 @@ import urllib
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line, create_venv, run_in_venv, print_separator, modify_file, get_device
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line, create_venv, run_in_venv, print_separator, modify_file, get_device, is_quiet
 
 MODEL_FILES = [
     ("COVER.pth", "https://github.com/vztu/COVER/raw/release/Model/COVER.pth"),
 ]
 
-def check_cover():
+def check_cover(rebuild=False):
     """Check if COVER is available."""
     
     repo = Path(__file__).parent / "cover"
+    if repo.exists() and rebuild:
+        subprocess.run(['rm', '-rf', str(repo)], check=True)
+
     if not repo.exists():
         print_separator("BUILDING COVER", newline=True)
         print_line("Cloning COVER repository...", force=True)
@@ -97,7 +100,7 @@ def run_cover(mode, distorted, output_dir=None):
         device = "cpu" if device.type == "mps" else device  # COVER does not support mps
         cmd = [
             'python', str(repo_dir / 'evaluate_one_video.py'),
-            '-v', distorted,
+            '-v', os.path.abspath(distorted),
             '-d', str(device),
         ]
         result = run_in_venv(str(repo_dir / 'venv'), cmd, work_dir=str(repo_dir))
@@ -118,7 +121,10 @@ def run_cover(mode, distorted, output_dir=None):
             print_key_value("Semantic Score", f"{results['semantic_score']:.4f}")
             print_key_value("Technical Score", f"{results['technical_score']:.4f}")
             print_key_value("Aesthetic Score", f"{results['aesthetic_score']:.4f}")
-            print_key_value("Overall Score", f"{results['fused_score']:.4f}", force=True)
+            print_key_value("Overall Score", f"{results['fused_score']:.4f}")
+
+            if is_quiet():
+                print_line(f"COVER ({analysis_duration.total_seconds():.0f}s) | {results['fused_score']:.4f} | {os.path.basename(distorted)}", force=True)
         
         if output_file.endswith('.json'):
             save_json(results, output_file)

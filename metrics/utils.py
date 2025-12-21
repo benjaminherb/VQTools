@@ -301,11 +301,14 @@ def format_file_size(size_bytes):
 _quiet_mode = False
 
 
-def set_quiet_mode(quiet=True):
+def set_quiet(quiet=True):
     """Set global quiet mode for printing."""
     global _quiet_mode
     _quiet_mode = quiet
 
+def is_quiet():
+    """Get the current quiet mode setting."""
+    return _quiet_mode
 
 def print_line(text=None, force=False):
     """Print a line of text unless in quiet mode, unless forced."""

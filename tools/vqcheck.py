@@ -1,6 +1,6 @@
 import os
 import argparse
-from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet_mode, print_line, get_output_filename
+from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet, print_line, get_output_filename, is_quiet
 
 MODES = {
     'ffmpeg': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'],
@@ -15,8 +15,8 @@ MODES = {
     'fastvqa': ['fastvqa', 'fastervqa'],
     'qalign': ['qalign'],
     'check': ['check']
-
 }
+
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli']
 NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
@@ -30,7 +30,7 @@ def check_model_availability(mode, rebuild=False):
 
     if mode in MODES['cover']:
         from metrics.cover import check_cover
-        if not check_cover():
+        if not check_cover(rebuild=rebuild):
             return False
 
     if mode in MODES['cvqa']:
@@ -232,7 +232,7 @@ def main():
     parser.add_argument('--rebuild', default=False, action='store_true', help='Delete and rebuild the selected model if applicable')
     args = parser.parse_args()
 
-    set_quiet_mode(args.quiet)
+    set_quiet(args.quiet)
 
     print_separator("STARTING VQCHECK")
 
@@ -263,9 +263,6 @@ def main():
         else:
             print_key_value("Output", f"{args.output}")
 
-    print_key_value("Mode", f"{args.mode}")
-    if not check_model_availability(args.mode, args.rebuild):
-        return
     
     if args.mode in NR_MODES and args.reference:
         args.reference = None # Ignore reference for NR modes
@@ -282,11 +279,18 @@ def main():
     perfect_match = 0
     jobs = get_jobs(distorted_files, reference_files, args.mode, output_dir)
     print_key_value("Jobs", str(len(jobs)))
+
+    if is_quiet():
+        print_line(f"VQCheck | Mode: {args.mode} | Jobs: {len(jobs)}", force=True)
+
+    print_key_value("Mode", f"{args.mode}")
+    if not check_model_availability(args.mode, args.rebuild):
+        return
     
     for (mode, distorted, reference, output_dir) in jobs:
 
         print_separator(f"VQCheck ({mode})", newline=True)
-        print_key_value("Distorted", distorted, force=True)
+        print_key_value("Distorted", distorted)
         if reference:
             print_key_value("Reference", reference)
         properties_match, results = run_analysis(args.mode, distorted, reference, output_dir)
