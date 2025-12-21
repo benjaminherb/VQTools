@@ -6,7 +6,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator, transcode_video
 
 
 MODEL_FILES = [
@@ -92,6 +92,13 @@ def run_fastvqa(mode, distorted, output_dir=None):
                 '-d', str(device),
             ]
             result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+
+            if result.returncode != 0 and 'DECORDError' in result.stderr:
+                print_line("Transcoding input video to a compatible format...", force=True)
+                transcoded_path = Path(temp_dir) / "distorted.mkv"
+                transcode_video(distorted, transcoded_path)
+                cmd[4] = os.path.abspath(transcoded_path)
+                result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
 
             if result.returncode != 0:
                 print_line(f"ERROR: FastVQA evaluation failed: {result.stderr}", force=True)

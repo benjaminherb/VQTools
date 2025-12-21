@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 import urllib
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, modify_file, create_venv, run_in_venv, print_separator
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, modify_file, create_venv, run_in_venv, print_separator, transcode_video
 
 MODEL_FILES = [
     ("DOVER.pth", "https://github.com/QualityAssessment/DOVER/releases/download/v0.1.0/DOVER.pth"),
@@ -106,6 +106,15 @@ def run_dover(mode, distorted, output_dir=None):
         ]
         result = run_in_venv(str(repo / 'venv'), cmd, work_dir=str(repo))
         
+        if result.returncode != 0 and 'DECORDError' in result.stderr:
+            print_line("Transcoding input video to a compatible format...", force=True)
+            with tempfile.TemporaryDirectory() as temp_dir:
+                transcoded_path = Path(temp_dir) / "distorted.mkv"
+                transcode_video(distorted, transcoded_path)
+                cmd[4] = os.path.abspath(transcoded_path)
+                result = run_in_venv(str(repo / 'venv'), cmd, work_dir=str(repo))
+        
+
         if result.returncode != 0:
             print_line(f"ERROR: DOVER evaluation failed: {result.stderr}", force=True)
             return None

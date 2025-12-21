@@ -69,6 +69,22 @@ def get_video_info(video_path):
         print_line(f"Error parsing ffprobe output for {video_path}: {e}", force=True)
         return None
 
+def transcode_video(input_path, output_path):
+    """Transcode video using ffmpeg to a lossless format."""
+    cmd = [
+        'ffmpeg',
+        '-i', input_path,
+        '-c:v', 'ffvhuff',
+        '-y',
+        output_path
+    ]
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        print_line(f"Error transcoding video {input_path}: {e.stderr}", force=True)
+        return False
 
 ## ------ Virtual Environment ------ ##
 
