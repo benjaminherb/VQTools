@@ -107,11 +107,11 @@ def run_dover(mode, distorted, output_dir=None):
         result = run_in_venv(str(repo / 'venv'), cmd, work_dir=str(repo))
         
         if result.returncode != 0 and 'DECORDError' in result.stderr:
-            print_line("Transcoding input video to a compatible format...", force=True)
+            print_key_value("Transcoding Input", "True")
             with tempfile.TemporaryDirectory() as temp_dir:
                 transcoded_path = Path(temp_dir) / "distorted.mkv"
                 transcode_video(distorted, transcoded_path)
-                cmd[4] = os.path.abspath(transcoded_path)
+                cmd[5] = os.path.abspath(transcoded_path)
                 result = run_in_venv(str(repo / 'venv'), cmd, work_dir=str(repo))
         
 
