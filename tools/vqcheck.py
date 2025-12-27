@@ -5,7 +5,7 @@ from metrics.utils import get_video_files, find_reference_file, format_duration,
 MODES = {
     'ffmpeg': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'],
     'cvqa': ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms'],
-    'lpips': ['lpips'],
+    'lpips': ['lpips-alex', 'lpips-vgg'],
     'dover': ['dover'],
     'cover': ['cover'],
     'uvq': ['uvq'],
@@ -25,7 +25,7 @@ AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 def check_model_availability(mode, rebuild=False):
     if mode in MODES['dover']:
         from metrics.dover import check_dover
-        if not check_dover():
+        if not check_dover(rebuild=rebuild):
             return False
 
     if mode in MODES['cover']:
