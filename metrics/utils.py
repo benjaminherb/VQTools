@@ -86,6 +86,14 @@ def transcode_video(input_path, output_path):
         print_line(f"Error transcoding video {input_path}: {e.stderr}", force=True)
         return False
 
+
+def extract_frames(video_path, temp_dir, fps=2):
+    cmd = ["ffmpeg", "-i", video_path, "-vf", f"fps={fps}", os.path.join(temp_dir.name, "frame_%06d.png")]
+    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    frame_files = sorted([os.path.join(temp_dir.name, f) for f in os.listdir(temp_dir.name) if f.endswith('.png')])
+    return frame_files 
+
+
 ## ------ Virtual Environment ------ ##
 
 def _use_conda():
@@ -266,6 +274,8 @@ def get_output_filename(distorted, mode, output_dir=None):
         return os.path.join(output_dir, f"{base_name}.psnr.json")
     elif 'vmaf' in mode:
         return os.path.join(output_dir, f"{base_name}.vmaf.json")
+    elif 'lpips' in mode:
+        return os.path.join(output_dir, f"{base_name}.lpips.json")
     else:
         return os.path.join(output_dir, f"{base_name}.{mode}.json")
 

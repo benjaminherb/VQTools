@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime
 from statistics import mean
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, extract_frames
 
 def get_command(metric):
     if metric == 'ssimulacra2':
@@ -29,19 +29,12 @@ def check_jpegxl(metric):
     return True
 
 
-def _extract_frames(video_path, temp_dir, fps=2):
-    cmd = ["ffmpeg", "-i", video_path, "-vf", f"fps={fps}", os.path.join(temp_dir.name, "frame_%06d.png")]
-    subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    frame_files = sorted([os.path.join(temp_dir.name, f) for f in os.listdir(temp_dir.name) if f.endswith('.png')])
-    return frame_files 
-
-
 def _process_frames(distorted_path, reference_path, metric):
     try:
         dis_temp_dir = tempfile.TemporaryDirectory()
         ref_temp_dir = tempfile.TemporaryDirectory()
-        distorted_frames = _extract_frames(distorted_path, dis_temp_dir, fps=2)
-        reference_frames = _extract_frames(reference_path, ref_temp_dir, fps=2)
+        distorted_frames = extract_frames(distorted_path, dis_temp_dir, fps=2)
+        reference_frames = extract_frames(reference_path, ref_temp_dir, fps=2)
     except Exception as e:
         print_line(f"Error extracting frames: {e}", force=True)
         return []
