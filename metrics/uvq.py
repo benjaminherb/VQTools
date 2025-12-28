@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info, print_line, print_separator, create_venv, run_in_venv
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info, print_line, print_separator, create_venv, run_in_venv, transcode_video
 
 
 def check_uvq():
@@ -28,6 +28,23 @@ def check_uvq():
             return False
     return True
 
+def run_uvq_command(distorted, uvq_output_dir):
+    uvq_work_dir = Path(__file__).parent / "uvq"
+
+    video_id = os.path.splitext(os.path.basename(distorted))[0]
+    video_length = int(round(get_video_info(distorted)['duration']))
+    
+    cmd = [
+        'python', str(uvq_work_dir / "uvq_main.py"),
+        f'--input_files={video_id},{video_length},{os.path.abspath(distorted)}',
+        f'--output_dir={uvq_output_dir}',
+        f'--model_dir={str(uvq_work_dir / "models")}',
+        '--transpose=False'
+    ]
+
+    result = run_in_venv(str(uvq_work_dir / 'venv'), cmd, work_dir=str(uvq_work_dir))
+    return result
+
 
 def run_uvq(mode, distorted, output_dir=None):
     """Run UVQ video quality assessment."""
@@ -46,22 +63,15 @@ def run_uvq(mode, distorted, output_dir=None):
     print_key_value("Start Time", ts(start_time))
     
     try:
-        video_id = os.path.splitext(os.path.basename(distorted))[0]
-        video_length = int(round(get_video_info(distorted)['duration']))
-
         with tempfile.TemporaryDirectory() as temp_dir:
             uvq_output_dir = os.path.join(temp_dir, 'uvq_results')
-            uvq_work_dir = Path(__file__).parent / "uvq"
-            
-            cmd = [
-                'python', str(uvq_work_dir / "uvq_main.py"),
-                f'--input_files={video_id},{video_length},{os.path.abspath(distorted)}',
-                f'--output_dir={uvq_output_dir}',
-                f'--model_dir={str(uvq_work_dir / "models")}',
-                '--transpose=False'
-            ]
+            result = run_uvq_command(distorted, uvq_output_dir)
 
-            result = run_in_venv(str(uvq_work_dir / 'venv'), cmd, work_dir=str(uvq_work_dir))
+            if result.returncode != 0:
+                print_key_value("Transcoding Input", "True")
+                transcoded_path = Path(temp_dir) / "distorted.mkv"
+                transcode_video(distorted, transcoded_path)
+                result = run_uvq_command(str(transcoded_path), uvq_output_dir)
 
             if result.returncode != 0:
                 print_line(f"ERROR: UVQ evaluation failed: {result.stderr}", force=True)
