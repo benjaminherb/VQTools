@@ -82,5 +82,5 @@ def run_lpips(mode, distorted, reference, output_dir=None, version='0.1'):
     if output_file is not None:
         save_json(results, output_file)
 
-    print_key_value("LPIPS", "{:.4f}".format(results["mean_distance"]), force=True)
+    print_key_value("LPIPS", "{:.4f}".format(results[f"lpips-{net}"]), force=True)
     return results
