@@ -82,6 +82,8 @@ metric_configs = {
     'musiq': [('musiq', lambda x: x['mean_musiq']),
               ('musiq', lambda x: x['mean_score'])],
     'vila': [('vila', lambda x: x['mean_vila'])],
+    'ssimulacra2': [('ssimulacra2', lambda x: x['mean_score'])],
+    'butteraugli': [('butteraugli', lambda x: x['mean_score'])],
     'qalign': [('qalign', lambda x: x['qalign_score']),
                ('qalign', lambda x: x['score'])],
     'cvqa-nr': [('cvqa-nr', lambda x: x['score'])],
