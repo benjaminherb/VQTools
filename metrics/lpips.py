@@ -66,9 +66,9 @@ def run_lpips(mode, distorted, reference, output_dir=None, version='0.1'):
         frame_distances.append(float(dist01.detach()))
     
     results.update({
-        'mean_distance': np.mean(frame_distances),
-        'min_distance': np.min(frame_distances),
-        'max_distance': np.max(frame_distances),
+        f'lpips-{net}': np.mean(frame_distances),
+        f'lpips-{net}_min': np.min(frame_distances),
+        f'lpips-{net}_max': np.max(frame_distances),
         'num_frames': len(frame_distances),
         'frame_distances': frame_distances,
     })
