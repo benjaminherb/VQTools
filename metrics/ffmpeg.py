@@ -4,7 +4,7 @@ import subprocess
 from datetime import datetime
 import json
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, is_quiet
 
 
 def run_ffmpeg(mode, distorted, reference, scale=None, fps=None, output_dir=None):
@@ -49,8 +49,11 @@ def run_ffmpeg(mode, distorted, reference, scale=None, fps=None, output_dir=None
                 print_key_value("PSNR Y", f"{pooled['psnr_y']['mean']:.2f} dB")
                 print_key_value("PSNR U", f"{pooled['psnr_u']['mean']:.2f} dB")
                 print_key_value("PSNR V", f"{pooled['psnr_v']['mean']:.2f} dB")
-                print_key_value("PSNR Avg", f"{pooled['psnr_avg']['mean']:.2f} dB", force=True)
+                print_key_value("PSNR Avg", f"{pooled['psnr_avg']['mean']:.2f} dB")
                 print_key_value("MSE Avg", f"{pooled['mse_avg']['mean']:.2f}")
+                
+                if is_quiet():
+                    print_line(f"PSNR ({analysis_duration.total_seconds():.0f}s) | {pooled['psnr_avg']['mean']:.2f} dB | {os.path.basename(distorted)}", force=True)
                 
                 if output_dir is not None:
                     final_output_file = get_output_filename(distorted, mode, output_dir)
@@ -60,15 +63,18 @@ def run_ffmpeg(mode, distorted, reference, scale=None, fps=None, output_dir=None
         else: # VMAF
             results = parse_vmaf_results(output_file, distorted, reference)
             if results:
-                print_key_value("VMAF", f"{results['vmaf']:.2f}", force=True)
+                print_key_value("VMAF", f"{results['vmaf']:.2f}")
                 if 'neg' in mode:
-                    print_key_value("VMAF (neg)", f"{results['vmaf_neg']:.2f}", force=True)
-                print_key_value("PSNR", f"{results['psnr']:.2f} dB", force=True)
+                    print_key_value("VMAF (neg)", f"{results['vmaf_neg']:.2f}")
+                print_key_value("PSNR", f"{results['psnr']:.2f} dB")
                 print_key_value("PSNR Y", f"{results['psnr_y']:.2f} dB")
                 print_key_value("PSNR CB", f"{results['psnr_cb']:.2f} dB")
                 print_key_value("PSNR CR", f"{results['psnr_cr']:.2f} dB")
-                print_key_value("SSIM", f"{results['ssim']:.4f}", force=True)
-                print_key_value("MS-SSIM", f"{results['ms_ssim']:.4f}", force=True)
+                print_key_value("SSIM", f"{results['ssim']:.4f}")
+                print_key_value("MS-SSIM", f"{results['ms_ssim']:.4f}")
+
+                if is_quiet():
+                    print_line(f"VMAF ({analysis_duration.total_seconds():.0f}s) | {results['vmaf']:.2f} | {os.path.basename(distorted)}", force=True)
 
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)
@@ -100,9 +106,9 @@ def get_lavfi(mode, output_file, scale=None, fps=None):
             model_name, model_neg_name =  "vmaf_v0.6.1", "vmaf_v0.6.1neg"
 
         if 'full' in mode:
-            lavfi = f"{prestring}libvmaf='model=version={model_name}\\:name=vmaf|version={model_neg_name}\\:name=vmaf_neg:feature=name=psnr|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
+            lavfi = f"{prestring}libvmaf='model=version={model_name}\\:name=vmaf|version={model_neg_name}\\:name=vmaf_neg:feature=name=psnr|name=psnr_hvs|name=float_ssim|name=float_ms_ssim|name=ciede|name=cambi:log_fmt=json:n_threads=16:log_path={output_file}'"
         else:
-            lavfi = f"{prestring}libvmaf='model=version={model_name}\\:name=vmaf:feature=name=psnr|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
+            lavfi = f"{prestring}libvmaf='model=version={model_name}\\:name=vmaf:feature=name=psnr|name=psnr_hvs|name=float_ssim|name=float_ms_ssim:log_fmt=json:n_threads=16:log_path={output_file}'"
 
     elif 'psnr' in mode:
         lavfi = f"{prestring}psnr='stats_file={output_file}'"
