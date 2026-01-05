@@ -1,6 +1,6 @@
 import os
 import argparse
-from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet, print_line, get_output_filename, is_quiet
+from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet, print_line, get_output_filename, is_quiet 
 
 MODES = {
     'ffmpeg': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'],
@@ -8,6 +8,7 @@ MODES = {
     'lpips': ['lpips-alex', 'lpips-vgg'],
     'dover': ['dover'],
     'cover': ['cover'],
+    'cvvdp': ['cvvdp'],
     'uvq': ['uvq'],
     'maxvqa': ['maxvqa'],
     'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists'],
@@ -17,7 +18,7 @@ MODES = {
     'check': ['check']
 }
 
-FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli']
+FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp']
 NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
@@ -36,6 +37,11 @@ def check_model_availability(mode, rebuild=False):
     if mode in MODES['cvqa']:
         from metrics.cvqa import check_cvqa
         if not check_cvqa():
+            return False
+
+    if mode in MODES['cvvdp']:
+        from metrics.colorvideovdp import check_cvvdp
+        if not check_cvvdp(rebuild=rebuild):
             return False
 
     if mode in MODES['uvq']:
@@ -177,6 +183,9 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
     elif mode in MODES['cover']:
         from metrics.cover import run_cover
         return properties_match, run_cover(mode, distorted, output_dir)
+    elif mode in MODES['cvvdp']:
+        from metrics.colorvideovdp import run_cvvdp
+        return properties_match, run_cvvdp(mode, distorted, reference, output_dir)
     elif mode in MODES['uvq']:
         from metrics.uvq import run_uvq
         return properties_match, run_uvq(mode, distorted, output_dir)

@@ -9,3 +9,4 @@ from metrics.pyiqa import run_pyiqa, check_pyiqa
 from metrics.fastvqa import run_fastvqa, check_fastvqa
 from metrics.qalign import run_qalign, check_qalign
 from metrics.jpegxl import run_jpegxl_metric, check_jpegxl
+from metrics.colorvideovdp import run_cvvdp, check_cvvdp
