@@ -276,6 +276,8 @@ def get_output_filename(distorted, mode, output_dir=None):
         return os.path.join(output_dir, f"{base_name}.vmaf.json")
     elif 'lpips' in mode:
         return os.path.join(output_dir, f"{base_name}.lpips.json")
+    elif 'cvvdp' in mode:
+        return os.path.join(output_dir, f"{base_name}.cvvdp.json")
     else:
         return os.path.join(output_dir, f"{base_name}.{mode}.json")
 
