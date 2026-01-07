@@ -8,7 +8,7 @@ MODES = {
     'lpips': ['lpips-alex', 'lpips-vgg'],
     'dover': ['dover'],
     'cover': ['cover'],
-    'cvvdp': ['cvvdp'],
+    'cvvdp': ['cvvdp-fhd', 'cvvdp-4k'],
     'uvq': ['uvq'],
     'maxvqa': ['maxvqa'],
     'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists'],
@@ -18,7 +18,7 @@ MODES = {
     'check': ['check']
 }
 
-FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp']
+FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k']
 NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
@@ -185,7 +185,8 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
         return properties_match, run_cover(mode, distorted, output_dir)
     elif mode in MODES['cvvdp']:
         from metrics.colorvideovdp import run_cvvdp
-        return properties_match, run_cvvdp(mode, distorted, reference, output_dir)
+        display = 'standard_fhd' if 'fhd' in mode else 'standard_4k'
+        return properties_match, run_cvvdp(mode, distorted, reference, output_dir, display=display)
     elif mode in MODES['uvq']:
         from metrics.uvq import run_uvq
         return properties_match, run_uvq(mode, distorted, output_dir)

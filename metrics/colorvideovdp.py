@@ -20,7 +20,7 @@ def check_cvvdp(rebuild=False):
             create_venv(str(venv_path), python='python3.13')
             #run_in_venv(str(venv_path), ['conda', 'install', 'ffmpeg', 'conda-forge::freeimage'])
             if get_device() == 'cuda':
-                run_in_venv(str(venv_path), ['conda', 'install', 'nvidia/label/cuda-12.9.1::cuda-toolkit'])
+                run_in_venv(str(venv_path), ['conda', 'install', '-y', 'nvidia/label/cuda-12.9.1::cuda-toolkit'])
             run_in_venv(str(venv_path), ['pip', 'install', 'cvvdp'])
 
         except Exception as e:
@@ -46,20 +46,21 @@ def run_cvvdp(mode, distorted, reference, output_dir=None, display='standard_4k'
     print_key_value("Start Time", ts(start_time))
     venv_path = Path(__file__).parent / "cvvdp_venv"
     #device = get_device()
-    result = run_in_venv(str(venv_path), ['cvvdp', '--test_file', os.path.abspath(distorted), '--ref_file', os.path.abspath(reference), '--display', display])
+    result = run_in_venv(str(venv_path), ['cvvdp', '--test', os.path.abspath(distorted), '--ref', os.path.abspath(reference), '--display', display, '-f', 'bicubic'])
 
     results = {
         "timestamp": ts(),
         "distorted": os.path.basename(distorted),
         "reference": os.path.basename(reference),
+        "scaling": "bicubic",
     }
 
     if result.returncode != 0:
         print_line(f"ERROR: CVVDP failed to run! {result.stderr}", force=True)
         return
 
-    print(result.stdout)
-    results.update(_parse_cvvdp_output(result.stdout))
+    output = result.stderr + result.stdout
+    results.update(_parse_cvvdp_output(output))
 
     end_time = datetime.now()
     analysis_duration = end_time - start_time
@@ -107,7 +108,7 @@ def _parse_cvvdp_output(stdout):
 
             m = re.search(r'\(([^)]+)\)\s*$', info)
             if m:
-                results['model'] = m.group(1)
+                results['display'] = m.group(1)
 
         # cvvdp=6.5130 [JOD]
         if line.startswith("cvvdp="):
