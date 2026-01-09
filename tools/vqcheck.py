@@ -3,7 +3,8 @@ import argparse
 from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet, print_line, get_output_filename, is_quiet 
 
 MODES = {
-    'ffmpeg': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr'],
+    'ffmpeg': ['ffmpeg-vmaf4k', 'ffmpeg-vmaf', 'ffmpeg-vmaf4k-full', 'ffmpeg-vmaf-full', 'psnr'],
+    'vmaf': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full'],
     'cvqa': ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms'],
     'lpips': ['lpips-alex', 'lpips-vgg'],
     'dover': ['dover'],
@@ -24,6 +25,11 @@ AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
 
 def check_model_availability(mode, rebuild=False):
+    if mode in MODES['vmaf']:
+        from metrics.vmaf import check_vmaf
+        if not check_vmaf(rebuild=rebuild):
+            return False
+
     if mode in MODES['dover']:
         from metrics.dover import check_dover
         if not check_dover(rebuild=rebuild):
@@ -171,6 +177,9 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, verbose=True)
     if mode in MODES['ffmpeg']:
         from metrics.ffmpeg import run_ffmpeg
         return properties_match, run_ffmpeg(mode, distorted, reference, scale, reference_fps, output_dir)
+    elif mode in MODES['vmaf']:
+        from metrics.vmaf import run_vmaf
+        return properties_match, run_vmaf(mode, distorted, reference, scale, reference_fps, output_dir)
     elif mode in MODES['cvqa']:
         from metrics.cvqa import run_cvqa
         return properties_match, run_cvqa(mode, distorted, reference, output_dir)

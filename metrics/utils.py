@@ -69,12 +69,18 @@ def get_video_info(video_path):
         print_line(f"Error parsing ffprobe output for {video_path}: {e}", force=True)
         return None
 
-def transcode_video(input_path, output_path):
+def transcode_video(input_path, output_path, format='ffvhuff', scale=None):
     """Transcode video using ffmpeg to a lossless format."""
+    if scale is not None:
+        scale_filter = f"scale={scale}"
+    else:
+        scale_filter = "scale=iw:ih"
+
     cmd = [
         'ffmpeg',
         '-i', input_path,
-        '-c:v', 'ffvhuff',
+        '-c:v', format,
+        '-vf', scale_filter,
         '-y',
         output_path
     ]
