@@ -47,7 +47,7 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None):
                '--reference', os.path.join(temp_dir, 'reference.y4m'),
                '--distorted', os.path.join(temp_dir, 'distorted.y4m'),
                '--output', output_file,
-               '--format', 'json',
+               '--json',
         ]
         cmd.extend(get_arguments(mode))
 
@@ -125,15 +125,16 @@ def get_arguments(mode):
     if '4k' in mode:
         args.extend(['--model', 'version=vmaf_4k_v0.6.1'])
         if 'full' in mode:
-            args.extend(['--model', 'version=vmaf_4k_v0.6.1neg'])
+            args.extend(['--model', 'version=vmaf_4k_v0.6.1neg:name=vmaf_neg'])
     else:
         args.extend(['--model', 'version=vmaf_v0.6.1'])
         if 'full' in mode:
-            args.extend(['--model', 'version=vmaf_v0.6.1neg'])
+            args.extend(['--model', 'version=vmaf_v0.6.1neg:name=vmaf_neg'])
 
     args.extend(['--feature', 'psnr', '--feature', 'psnr_hvs', '--feature', 'float_ssim', '--feature', 'float_ms_ssim'])
 
     threads = os.cpu_count()
-    threads = threads - max(4, threads * 0.8)
+    threads = max(1, threads - min(4, int(threads * 0.2)))
     args.extend(['--threads', str(threads)])
+    return args
 
