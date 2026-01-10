@@ -1,5 +1,6 @@
 import os
 import argparse
+import shutil
 from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet, print_line, get_output_filename, is_quiet 
 import tempfile
 
@@ -140,7 +141,7 @@ def compare_video_properties(reference, distorted):
     return True
 
 
-def run_analysis(mode, distorted, reference=None, output_dir=None, tempdir=None):
+def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None):
     
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
@@ -180,7 +181,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, tempdir=None)
         return properties_match, run_ffmpeg(mode, distorted, reference, scale, reference_fps, output_dir)
     elif mode in MODES['vmaf']:
         from metrics.vmaf import run_vmaf
-        return properties_match, run_vmaf(mode, distorted, reference, scale, reference_fps, output_dir, tempdir=tempdir)
+        return properties_match, run_vmaf(mode, distorted, reference, scale, reference_fps, output_dir, temp_dir=temp_dir)
     elif mode in MODES['cvqa']:
         from metrics.cvqa import run_cvqa
         return properties_match, run_cvqa(mode, distorted, reference, output_dir)
@@ -241,19 +242,7 @@ def get_jobs(distorted_files, reference_files, mode, output_dir):
     
     return jobs
 
-def main():
-    
-    parser = argparse.ArgumentParser(description='Run video quality analysis comparing a distorted video against a reference video')
-    parser.add_argument("-d", '--distorted', required=True, help='Distorted (compressed) video file or folder')
-    parser.add_argument("-r", '--reference', help='Reference (original) video file or folder (required for FR methods)')
-    parser.add_argument("-m", '--mode', choices=AVAILABLE_MODES, default='vmaf4k-full')
-    parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
-    parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Enable quiet output')
-    parser.add_argument('--rebuild', default=False, action='store_true', help='Delete and rebuild the selected model if applicable')
-    parser.add_argument('--tempdir', help='Specify temporary directory to use')
-    args = parser.parse_args()
-
-    set_quiet(args.quiet)
+def vqcheck(args, temp_dir):
 
     print_separator("STARTING VQCHECK")
 
@@ -295,11 +284,6 @@ def main():
         else:
             output_dir = args.output
 
-    if args.tempdir:
-        tempdir = tempfile.mkdtemp(prefix='vqcheck_', dir=args.tempdir)
-    else:
-        tempdir = tempfile.mkdtemp(prefix='vqcheck_')
-
     total_files = len(distorted_files)
     matching_properties = 0
     perfect_match = 0
@@ -319,7 +303,7 @@ def main():
         print_key_value("Distorted", distorted)
         if reference:
             print_key_value("Reference", reference)
-        properties_match, results = run_analysis(args.mode, distorted, reference, output_dir, tempdir=tempdir)
+        properties_match, results = run_analysis(args.mode, distorted, reference, output_dir, temp_dir=temp_dir)
         if not properties_match and results is None:
             print_line("SKIPPED (property mismatch)", force=True)
         print_separator()
@@ -346,6 +330,31 @@ def main():
             print_key_value("Perfect Matches", str(perfect_match))
         print_separator()
     
+def main():
+    parser = argparse.ArgumentParser(description='Run video quality analysis comparing a distorted video against a reference video')
+    parser.add_argument("-d", '--distorted', required=True, help='Distorted (compressed) video file or folder')
+    parser.add_argument("-r", '--reference', help='Reference (original) video file or folder (required for FR methods)')
+    parser.add_argument("-m", '--mode', choices=AVAILABLE_MODES, default='vmaf4k-full')
+    parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
+    parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Enable quiet output')
+    parser.add_argument('--rebuild', default=False, action='store_true', help='Delete and rebuild the selected model if applicable')
+    parser.add_argument('--tempdir', help='Specify temporary directory to use')
+    args = parser.parse_args()
+
+    set_quiet(args.quiet)
+
+    if args.tempdir:
+        temp_dir = os.path.join(args.tempdir, 'vqcheck_temp')
+        os.makedirs(temp_dir, exist_ok=True)
+    else:
+        temp_dir = tempfile.mkdtemp(prefix='vqcheck_temp_')
+    
+    try:
+        vqcheck(args, temp_dir)
+    except KeyboardInterrupt:
+        print_line("VQCheck stopped by user", force=True)
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 if __name__ == "__main__":
     main()

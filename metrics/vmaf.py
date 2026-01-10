@@ -40,6 +40,12 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None, 
     try:
         print_line("\nRESULTS")
         print_key_value("Start Time", ts(start_time))
+
+        for d in ['ref', 'dis']:
+            dir_path = os.path.join(temp_dir, d)
+            if not os.path.exists(dir_path):
+                os.makedirs(dir_path)
+
         reference_temp_path = os.path.join(temp_dir, 'ref', f'{os.path.basename(reference)}.y4m')
         distorted_temp_path = os.path.join(temp_dir, 'dis', f'{os.path.basename(distorted)}.y4m')
         if not os.path.exists(os.path.dirname(reference_temp_path)):
