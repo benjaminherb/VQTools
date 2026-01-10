@@ -48,7 +48,7 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None, 
 
         reference_temp_path = os.path.join(temp_dir, 'ref', f'{os.path.basename(reference)}.y4m')
         distorted_temp_path = os.path.join(temp_dir, 'dis', f'{os.path.basename(distorted)}.y4m')
-        if not os.path.exists(os.path.dirname(reference_temp_path)):
+        if not os.path.exists(reference_temp_path):
             transcode_video(reference, reference_temp_path, format='rawvideo', scale=scale)
         transcode_video(distorted, distorted_temp_path, format='rawvideo', scale=scale)
 
