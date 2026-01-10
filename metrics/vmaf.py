@@ -3,9 +3,6 @@ import tempfile
 import subprocess
 from datetime import datetime
 import json
-from pathlib import Path
-import urllib
-import stat
 
 from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, is_quiet, transcode_video
 
@@ -24,9 +21,11 @@ def check_vmaf(rebuild=False):
     return True
 
 
-def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None):
+def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None, temp_dir=None):
 
-    temp_dir = tempfile.mkdtemp(prefix='vqcheck_vmaf_')
+    if temp_dir is None:
+        temp_dir = tempfile.mkdtemp(prefix='vqcheck_vmaf_')
+
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
         
@@ -41,11 +40,15 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None):
     try:
         print_line("\nRESULTS")
         print_key_value("Start Time", ts(start_time))
-        transcode_video(reference, os.path.join(temp_dir, 'reference.y4m'), format='rawvideo', scale=scale)
-        transcode_video(distorted, os.path.join(temp_dir, 'distorted.y4m'), format='rawvideo', scale=scale)
+        reference_temp_path = os.path.join(temp_dir, 'ref', f'{os.path.basename(reference)}.y4m')
+        distorted_temp_path = os.path.join(temp_dir, 'dis', f'{os.path.basename(distorted)}.y4m')
+        if not os.path.exists(os.path.dirname(reference_temp_path)):
+            transcode_video(reference, reference_temp_path, format='rawvideo', scale=scale)
+        transcode_video(distorted, distorted_temp_path, format='rawvideo', scale=scale)
+
         cmd = ['vmaf',
-               '--reference', os.path.join(temp_dir, 'reference.y4m'),
-               '--distorted', os.path.join(temp_dir, 'distorted.y4m'),
+               '--reference', reference_temp_path,
+               '--distorted', distorted_temp_path,
                '--output', output_file,
                '--json',
         ]
