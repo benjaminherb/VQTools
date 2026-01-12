@@ -12,7 +12,7 @@ MODES = {
     'dover': ['dover'],
     'cover': ['cover'],
     'cvvdp': ['cvvdp-fhd', 'cvvdp-4k'],
-    'uvq': ['uvq'],
+    'uvq': ['uvq', 'uvq1p5'],
     'maxvqa': ['maxvqa'],
     'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd'],
     'jpegxl': ['ssimulacra2', 'butteraugli'],
@@ -54,7 +54,7 @@ def check_model_availability(mode, rebuild=False):
 
     if mode in MODES['uvq']:
         from metrics.uvq import check_uvq
-        if not check_uvq():
+        if not check_uvq(rebuild=rebuild):
             return False
 
     if mode in MODES['maxvqa']:

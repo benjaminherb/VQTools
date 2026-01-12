@@ -3,14 +3,19 @@ import subprocess
 import tempfile
 from datetime import datetime
 from pathlib import Path
+import re
+import json
 
 from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info, print_line, print_separator, create_venv, run_in_venv, transcode_video
 
 
-def check_uvq():
+def check_uvq(rebuild=False):
     """Check if UVQ repository exists and is properly set up."""
     repo_path = Path(__file__).parent / "uvq"
     venv_path = repo_path / "venv"
+
+    if rebuild and repo_path.exists():
+        subprocess.run(['rm', '-rf', str(repo_path)], check=True)
     
     if not repo_path.exists():
         print_separator("BUILDING UVQ", newline=True)
@@ -28,21 +33,18 @@ def check_uvq():
             return False
     return True
 
-def run_uvq_command(distorted, uvq_output_dir):
+def run_uvq_command(distorted, mode):
     uvq_work_dir = Path(__file__).parent / "uvq"
-
-    video_id = os.path.splitext(os.path.basename(distorted))[0]
-    video_length = int(round(get_video_info(distorted)['duration']))
-    
+    model_version = '1.0' if mode == 'uvq' else '1.5'
     cmd = [
-        'python', str(uvq_work_dir / "uvq_main.py"),
-        f'--input_files={video_id},{video_length},{os.path.abspath(distorted)}',
-        f'--output_dir={uvq_output_dir}',
-        f'--model_dir={str(uvq_work_dir / "models")}',
-        '--transpose=False'
+        'python', str(uvq_work_dir / "uvq_inference.py"),
+        f'{os.path.abspath(distorted)}',
+        f'--model_version', model_version,
+        f'--output_all_stats',
     ]
 
     result = run_in_venv(str(uvq_work_dir / 'venv'), cmd, work_dir=str(uvq_work_dir))
+    
     return result
 
 
@@ -64,27 +66,30 @@ def run_uvq(mode, distorted, output_dir=None):
     
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            uvq_output_dir = os.path.join(temp_dir, 'uvq_results')
-            result = run_uvq_command(distorted, uvq_output_dir)
+            result = run_uvq_command(distorted, mode)
 
             if result.returncode != 0:
                 print_key_value("Transcoding Input", "True")
                 transcoded_path = Path(temp_dir) / "distorted.mkv"
                 transcode_video(distorted, transcoded_path)
-                result = run_uvq_command(str(transcoded_path), uvq_output_dir)
+                result = run_uvq_command(str(transcoded_path), mode)
 
             if result.returncode != 0:
                 print_line(f"ERROR: UVQ evaluation failed: {result.stderr}", force=True)
                 return None
-            
-            results = _parse_uvq_results(uvq_output_dir, distorted)
+
+            results = {
+                "timestamp": ts(),
+                "distorted": os.path.basename(distorted),
+            }
+            results.update(_parse_uvq_results(result.stdout))
             
             end_time = datetime.now()
             analysis_duration = end_time - start_time
             
             print_key_value("End Time", ts(end_time))
             print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
-            if results:
+            if results and mode == 'uvq':
                 print_key_value("UVQ Score", f"{results['compression_content_distortion']:.4f}", force=True)
                 print_key_value("Compression", f"{results['compression']:.4f}")
                 print_key_value("Content", f"{results['content']:.4f}")
@@ -93,6 +98,8 @@ def run_uvq(mode, distorted, output_dir=None):
                 print_key_value("Compression+Distortion", f"{results['compression_distortion']:.4f}")
                 print_key_value("Content+Distortion", f"{results['content_distortion']:.4f}")
                 print_key_value("Compression+Content+Distortion", f"{results['compression_content_distortion']:.4f}")
+            elif results and mode == 'uvq1p5':
+                print_key_value("UVQ 1.5 Score", f"{results['uvq1p5_score']:.4f}", force=True)
 
             if output_file:
                 save_json(results, output_file)
@@ -103,29 +110,19 @@ def run_uvq(mode, distorted, output_dir=None):
         print_line(f"ERROR: UVQ evaluation failed: {e}", force=True)
         return None
 
-def _parse_uvq_results(output_dir, video_path):
-    """Parse UVQ results from output directory."""
-    import csv
-    
+def _parse_uvq_results(stdout):
+    match = re.search(r'\{.*?\}', stdout, re.DOTALL)
+    if not match:
+        raise ValueError(f"Failed to extract UVQ results from output ({stdout})")
+
+    dict_str = match.group(0).strip()
+
     try:
-        # results/video_id/video_id_uvq.csv
-        video_id = os.path.splitext(os.path.basename(video_path))[0]
-        csv_file = os.path.join(output_dir, video_id, f"{video_id}_uvq.csv")
-        
-        scores = {
-            'timestamp': ts(),
-            'distorted': os.path.basename(video_path)
-        }
-        
-        with open(csv_file, 'r') as f:
-            for row in csv.reader(f):
-                model_name = row[1]  # compression, content, distortion, etc.
-                score = float(row[2])
-                scores[model_name] = score
+        results = json.loads(dict_str)
+        # delet if in there 'video_name
+        if 'video_name' in results:
+            del results['video_name'] # avoid redundant info
 
-        scores['uvq'] = scores.get('compression_content_distortion', None)
-        return scores    
-    except Exception as e:
-        print_line(f"ERROR: Could not parse UVQ results: {e}", force=True)
-
-    return None
+        return results
+    except json.JSONDecodeError:
+        raise ValueError(f"Failed to extract UVQ results from output ({stdout})")
