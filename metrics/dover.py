@@ -6,17 +6,21 @@ from datetime import datetime
 from pathlib import Path
 import urllib
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, modify_file, create_venv, run_in_venv, print_separator, transcode_video
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, modify_file, create_venv, run_in_venv, print_separator, transcode_video, is_quiet
 
 MODEL_FILES = [
     ("DOVER.pth", "https://github.com/QualityAssessment/DOVER/releases/download/v0.1.0/DOVER.pth"),
     ("DOVER-Mobile.pth", "https://github.com/QualityAssessment/DOVER/releases/download/v0.5.0/DOVER-Mobile.pth"),
 ]
 
-def check_dover():
+def check_dover(rebuild=False):
     """Clone the Dover repo if missing and download pretrained weights if needed. """
 
     repo = Path(__file__).parent / "dover"
+
+    if repo.exists() and rebuild:
+        subprocess.run(['rm', '-rf', str(repo)], check=True)
+
     if not repo.exists():
         print_separator("BUILDING DOVER", newline=True)
         print_line("Cloning Dover repository...", force=True)
@@ -131,7 +135,9 @@ def run_dover(mode, distorted, output_dir=None):
         if results:
             print_key_value("Technical Score", f"{results['technical_score']:.4f}")
             print_key_value("Aesthetic Score", f"{results['aesthetic_score']:.4f}")
-            print_key_value("Fused Score", f"{results['fused_score']:.4f}", force=True)
+            print_key_value("Fused Score", f"{results['fused_score']:.4f}")
+            if is_quiet():
+                print_line(f"DOVER ({analysis_duration.total_seconds():.0f}s) | {results['fused_score']:.4f} | {os.path.basename(distorted)}", force=True)
         
         if output_file:
             save_json(results, output_file)
