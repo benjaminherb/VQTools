@@ -58,7 +58,7 @@ def run_mdtvsfa(mode, distorted, output_dir=None):
     try:
         
         repo = Path(__file__).parent / "mdtvsfa" 
-        frame_batch_size = 32  # default
+        frame_batch_size = 1  # doesnt seem to affect performance much and avoids OOM with high res videos. Scores were identical in tests.
         device = get_device()
         cmd = [
             'python', str(repo / 'test_demo.py'),
@@ -77,8 +77,7 @@ def run_mdtvsfa(mode, distorted, output_dir=None):
         score = _parse_mdtvfs_results(result.stdout, result.stderr, distorted)
         results = {
             'timestamp': ts(datetime.now()),
-            'distorted': os.path.abspath(distorted),
-            'frame_batch_size': frame_batch_size,
+            'distorted': os.path.basename(distorted),
             'score': score
         }
         
@@ -89,7 +88,9 @@ def run_mdtvsfa(mode, distorted, output_dir=None):
         print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
         
         if results:
-            print_line(f"Score ({analysis_duration.total_seconds():.0f}s) | {results['score']:.4f} | {os.path.basename(distorted)}", force=True)
+            print_line(f"Score {results['score']:.4f}")
+            if is_quiet():
+                print_line(f"Score ({analysis_duration.total_seconds():.0f}s) | {results['score']:.4f} | {os.path.basename(distorted)}", force=True)
         
         if output_file:
             save_json(results, output_file)
