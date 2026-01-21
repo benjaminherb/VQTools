@@ -14,6 +14,7 @@ MODES = {
     'cvvdp': ['cvvdp-fhd', 'cvvdp-4k'],
     'uvq': ['uvq', 'uvq1p5'],
     'maxvqa': ['maxvqa'],
+    'mdtvsfa': ['mdtvsfa'],
     'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd'],
     'jpegxl': ['ssimulacra2', 'butteraugli'],
     'fastvqa': ['fastvqa', 'fastervqa'],
@@ -22,7 +23,7 @@ MODES = {
 }
 
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 
 
@@ -60,6 +61,11 @@ def check_model_availability(mode, rebuild=False):
     if mode in MODES['maxvqa']:
         from metrics.maxvqa import check_maxvqa
         if not check_maxvqa():
+            return False
+        
+    if mode in MODES['mdtvsfa']:
+        from metrics.mdtvsfa import check_mdtvsfa
+        if not check_mdtvsfa(rebuild=rebuild):
             return False
 
     if mode in MODES['pyiqa']:
@@ -204,6 +210,9 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
     elif mode in MODES['maxvqa']:
         from metrics.maxvqa import run_maxvqa
         return properties_match, run_maxvqa(mode, distorted, reference, output_dir)
+    elif mode in MODES['mdtvsfa']:
+        from metrics.mdtvsfa import run_mdtvsfa
+        return properties_match, run_mdtvsfa(mode, distorted, output_dir)
     elif mode in MODES['pyiqa']:
         from metrics.pyiqa import run_pyiqa
         return properties_match, run_pyiqa(mode, distorted, reference, output_dir)
