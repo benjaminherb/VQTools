@@ -88,7 +88,7 @@ def run_mdtvsfa(mode, distorted, output_dir=None):
         print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
         
         if results:
-            print_line(f"Score {results['score']:.4f}")
+            print_key_value(f"Score", f"{results['score']:.4f}")
             if is_quiet():
                 print_line(f"Score ({analysis_duration.total_seconds():.0f}s) | {results['score']:.4f} | {os.path.basename(distorted)}", force=True)
         
