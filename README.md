@@ -33,6 +33,8 @@ vqcheck -m lpips -d /path/to/distorted -r /path/to/references/ -o ./results/
 - `-m, --mode` — Which metric/mode to run (see table below).
 - `-o, --output` — Optional: save output files (one `*.method.json` per video). If `-o` is passed without an argument, the output is written next to the distorted files.
 - `-q, --quiet` — Reduce console output
+- `--rebuild` - Delete and rebuild the selected model if applicable
+- `--tempdir` - Specify temporary directory to use (eg for transcoding)
 
 #### Notes:
 - If `--reference` is a folder, the script uses the closest filename match.
@@ -49,12 +51,14 @@ vqcheck -m lpips -d /path/to/distorted -r /path/to/references/ -o ./results/
 | Check | FR | `check` | | Metadata check to ensure metadata for distorted and reference match (resolution, framerate, framecount etc)|
 | PSNR | FR | `psnr` | | Faster way to just calculate PSNR|
 | VMAF | FR | `vmaf` `vmaf4k` `vmaf-full` `vmaf4k-full` | [VMAF](https://github.com/Netflix/vmaf) | Always includes SSIM/MS-SSIM and PSNR; `full` variants additionally include the NEG (no-enhancement gain) variants (slower).|
-| LPIPS |FR| `lpips` | [PerceptualSimilarity](https://github.com/richzhang/PerceptualSimilarity) | [Paper](https://arxiv.org/abs/1801.03924) - frame-wise metric, uses `alex` as network |
-| PyIQA | FR/NR | `musiq`, `brisque`, `niqe`,  `dists`, `clipiqa`, `clipiqa+`| [IQA-Pytorch](https://github.com/chaofengc/IQA-PyTorch) | [Musiq](https://arxiv.org/abs/2108.05997) - [BRISQUE](https://ieeexplore.ieee.org/document/6272356) - [NIQE](https://live.ece.utexas.edu/research/Quality/niqe_spl.pdf) - [DISTS](https://arxiv.org/abs/2004.07728) - [CLIP-IQA(+)](https://arxiv.org/abs/2207.12396) - image quality metrics provided as mean and per-frame scores (sampled at 2 per second). |
+| CVVDP | FR | `cvvdp-fhd`, `cvvdp-4k` | [ColorVideoVDP](https://github.com/gfxdisp/colorvideovdp) | [Paper](https://doi.org/10.1145/3658144) |
+| LPIPS |FR| `lpips-alex`, `lpips-vgg` | [PerceptualSimilarity](https://github.com/richzhang/PerceptualSimilarity) | [Paper](https://arxiv.org/abs/1801.03924) - frame-wise metric, uses `AlexNet` or `VGG` as backbone |
+| PyIQA | FR/NR | `musiq`, `brisque`, `niqe`,  `dists`, `clipiqa`, `clipiqa+`, `fsim`, `nlpd`| [IQA-Pytorch](https://github.com/chaofengc/IQA-PyTorch) | [Musiq](https://arxiv.org/abs/2108.05997) - [BRISQUE](https://ieeexplore.ieee.org/document/6272356) - [NIQE](https://live.ece.utexas.edu/research/Quality/niqe_spl.pdf) - [DISTS](https://arxiv.org/abs/2004.07728) - [CLIP-IQA(+)](https://arxiv.org/abs/2207.12396) - [FSIM](https://doi.org/10.1109/TIP.2011.2109730) - [NLPD](https://www.uv.es/lapeva/papers/2016_HVEI.pdf) - image quality metrics provided as mean and per-frame scores (sampled at 2 per second). |
 | JPEG XL | FR | `ssimulacra2`, `butteraugli` | [SSIMULACRA2](https://github.com/cloudinary/ssimulacra2) [Butteraugli](https://github.com/google/butteraugli)  | Image metric (sampled at 2 per second), uses implementations included with JPEG XL |
 | CVQA | FR/NR | `cvqa-nr` `cvqa-nr-ms` `cvqa-fr` `cvqa-fr-ms` | [CompressedVQA](https://github.com/sunwei925/CompressedVQA) | [Paper](https://arxiv.org/abs/2106.01111) |
+| MDTVSFA | NR | `mdtvsfa` | [MDTVSFA](https://github.com/lidq92/MDTVSFA) | [Paper](https://link.springer.com/article/10.1007%2Fs11263-020-01408-w) |
 | FastVQA |NR| `fastvqa` `fastervqa`| [FAST-VQA/FasterVQA](https://github.com/VQAssessment/FAST-VQA-and-FasterVQA) | [Paper](https://arxiv.org/abs/2210.05357) |
-| UVQ |NR| `uvq` | [UVQ](https://github.com/google/uvq) | [Paper](https://openaccess.thecvf.com/content/CVPR2021/html/Wang_Rich_Features_for_Perceptual_Quality_Assessment_of_UGC_Videos_CVPR_2021_paper.html) - separate and combined scores for compression, distortion and content|
+| UVQ |NR| `uvq`, `uvq1p5` | [UVQ](https://github.com/google/uvq) | [Paper](https://openaccess.thecvf.com/content/CVPR2021/html/Wang_Rich_Features_for_Perceptual_Quality_Assessment_of_UGC_Videos_CVPR_2021_paper.html) - separate and combined scores for compression, distortion and content|
 | Dover |NR| `dover` | [DOVER](https://github.com/QualityAssessment/DOVER) | [Paper](https://arxiv.org/abs/2211.04894) -  includes technical and aesthetic score |
 | Q-Align |NR| `qalign` | [Q-Align](https://github.com/Q-Future/Q-Align) | [Paper](https://arxiv.org/abs/2312.17090) |
 | MaxVQA | NR | `maxvqa` | [ExplainableVQA](https://github.com/VQAssessment/ExplainableVQA) | [Paper](https://arxiv.org/abs/2305.12726) - several scores for different quality factors |
