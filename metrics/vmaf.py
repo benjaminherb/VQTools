@@ -85,6 +85,8 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None, 
 
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)
+        
+        os.remove(distorted_temp_path)
 
         return results
 
