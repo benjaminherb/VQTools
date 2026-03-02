@@ -3,7 +3,7 @@ import argparse
 import subprocess
 from pathlib import Path
 
-VIDEO_EXTENSIONS = ['.mkv', '.mp4', '.mov', '.avi', '.m4v', '.wmv', '.yuv', '.y4m', '.raw']
+VIDEO_EXTENSIONS = ['.mkv', '.mp4', '.mov', '.mxf', '.avi', '.m4v', '.wmv', '.yuv', '.y4m', '.raw']
 
 def transcode(args):
     """Convert all video files to a specified codec"""
@@ -63,7 +63,10 @@ def transcode(args):
         if args.scale is not None:
             width, height = args.scale
             cmd.extend(['-vf', f'scale={width}:{height}:force_original_aspect_ratio=decrease', '-sws_flags', 'bicubic'])
-            
+
+        if args.options:
+            cmd.extend(args.options.split(" "))
+
         cmd.extend([
             '-c:a', 'copy', '-c:s', 'copy',
             '-y', str(output_file)
@@ -98,8 +101,9 @@ def main():
     parser.add_argument('--input_resolution', '-ir', nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Input resolution for raw video files')
     parser.add_argument('--input_framerate', '-ifr', type=float, help='Input framerate for raw video files')
     parser.add_argument('--input_pixel_format', '-ipf', type=str, help='Input pixel format for raw video files (e.g., yuv420p)')
+    parser.add_argument('--options', '-opt', type=str, help='Additional ffmpeg options as string')
     parser.add_argument('--dryrun', action='store_true', help='Show commands without executing them')
-    
+
     args = parser.parse_args()
 
     if any([args.input_resolution, args.input_framerate, args.input_pixel_format]) and not all([args.input_resolution, args.input_framerate, args.input_pixel_format]):
