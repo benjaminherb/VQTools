@@ -26,7 +26,7 @@ def get_image_files(folder_path: Path):
     return sorted(parent.glob(pat))
 
 
-def encode_sequence(folder_path: Path, output_path: Path, fps=60, scale=None, ffvhuff=False, pix_fmt=None):
+def encode_sequence(folder_path: Path, output_path: Path, fps=60, scale=None, codec='ffv1', pix_fmt=None):
     input_pattern = get_image_pattern(folder_path)
 
     cmd = [
@@ -40,10 +40,14 @@ def encode_sequence(folder_path: Path, output_path: Path, fps=60, scale=None, ff
         input_pattern,
     ]
 
-    if ffvhuff:
+    if codec == 'ffvhuff':
         cmd.extend(["-c:v", "ffvhuff"])
-    else:
+    elif codec == 'ffv1':
+            cmd.extend(['-c:v', 'ffv1', '-level', '3', '-slicecrc', '1'])
+    elif codec == 'h265':
         cmd.extend(["-c:v", "libx265", "-x265-params", "lossless=1"])
+    else:
+        raise ValueError(f"Unsupported codec: {codec}")
 
     if pix_fmt:
         cmd.extend(["-pix_fmt", pix_fmt])
@@ -73,7 +77,7 @@ def main():
     parser.add_argument("--fps", type=int, default=60, help="Output framerate (default: 60)")
     parser.add_argument("--scale", nargs='?', const='3840:2160', default=None,
                         help="Scale the output to W:H using lanczos. If given without value defaults to 3840:2160.")
-    parser.add_argument("--ffvhuff", default=False, action="store_true", help="Use ffvhuff instead of h265")
+    parser.add_argument("--codec", "-c", default='ffv1', help="Codec to use for encoding (default: ffv1). Supported: ffv1, ffvhuff, h265")
     parser.add_argument("--pix-fmt", default=None, help="Pixel format to set for ffmpeg")
     parser.add_argument("--output-dir", help="Output directory (default: <root>/mkv)")
     parser.add_argument("--dryrun", action="store_true", help="Do not run ffmpeg")
@@ -115,7 +119,7 @@ def main():
         pix = args.pix_fmt
 
         if not args.dryrun:
-            if encode_sequence(folder, output_path, args.fps, scale_value, args.ffvhuff, pix):
+            if encode_sequence(folder, output_path, args.fps, scale_value, args.codec, pix):
                 success_count += 1
         print("-" * 50)
 
