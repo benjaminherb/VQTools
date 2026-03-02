@@ -1,16 +1,11 @@
-import argparse
 import os
-import subprocess
 import tempfile
-import json 
-import time
 import lpips
-import re
 import numpy as np
 from datetime import datetime
 import contextlib
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, extract_frames
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, extract_frames, is_quiet
 
 
 def run_lpips(mode, distorted, reference, output_dir=None, version='0.1'):
@@ -82,5 +77,7 @@ def run_lpips(mode, distorted, reference, output_dir=None, version='0.1'):
     if output_file is not None:
         save_json(results, output_file)
 
-    print_key_value("LPIPS", "{:.4f}".format(results[f"lpips-{net}"]), force=True)
+    print_key_value("LPIPS", "{:.4f}".format(results[f"lpips-{net}"]))
+    if is_quiet():
+        print_line(f"LPIPS ({analysis_duration.total_seconds():.0f}s) | {results[f'lpips-{net}']:.4f} | {os.path.basename(distorted)}", force=True)
     return results
