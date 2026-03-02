@@ -228,6 +228,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
+
 def get_jobs(distorted_files, reference_files, mode, output_dir):
     jobs = []
     for distorted in distorted_files:
@@ -251,7 +252,8 @@ def get_jobs(distorted_files, reference_files, mode, output_dir):
     
     return jobs
 
-def vqcheck(args, temp_dir):
+
+def vqcheck(args, mode, temp_dir):
 
     print_separator("STARTING VQCHECK")
 
@@ -271,39 +273,37 @@ def vqcheck(args, temp_dir):
     if args.reference:
         print_key_value("Reference", f"{args.reference} ({len(reference_files)})")
 
-    if args.mode in FR_MODES and not args.reference:
+    if mode in FR_MODES and not args.reference:
         print_line("ERROR: Reference video is required for the selected mode", force=True)
         return
 
-    # just print
-    if args.output:
-        if args.output == '.':
-            print_key_value("Output", "(same as distorted files)")
-        else:
-            print_key_value("Output", f"{args.output}")
-
-    
-    if args.mode in NR_MODES and args.reference:
-        args.reference = None # Ignore reference for NR modes
-
     output_dir = None
     if args.output is not None:
-        if args.output == '.':
-            output_dir = os.path.dirname(distorted)
-        else:
-            output_dir = args.output
+        output_dir = args.output
+        if output_dir.lower() != mode.lower():
+            output_dir = os.path.join(args.output, mode)
+
+
+    # just print
+    if args.output:
+        print_key_value("Output", f"{output_dir}")
+
+    
+    if mode in NR_MODES and args.reference:
+        args.reference = None # Ignore reference for NR modes
+
 
     total_files = len(distorted_files)
     matching_properties = 0
     perfect_match = 0
-    jobs = get_jobs(distorted_files, reference_files, args.mode, output_dir)
+    jobs = get_jobs(distorted_files, reference_files, mode, output_dir)
     print_key_value("Jobs", str(len(jobs)))
 
     if is_quiet():
-        print_line(f"VQCheck | Mode: {args.mode} | Jobs: {len(jobs)}", force=True)
+        print_line(f"VQCheck | Mode: {mode} | Jobs: {len(jobs)}", force=True)
 
-    print_key_value("Mode", f"{args.mode}")
-    if not check_model_availability(args.mode, args.rebuild):
+    print_key_value("Mode", f"{mode}")
+    if not check_model_availability(mode, args.rebuild):
         return
     
     for (mode, distorted, reference, output_dir) in jobs:
@@ -312,7 +312,7 @@ def vqcheck(args, temp_dir):
         print_key_value("Distorted", distorted)
         if reference:
             print_key_value("Reference", reference)
-        properties_match, results = run_analysis(args.mode, distorted, reference, output_dir, temp_dir=temp_dir)
+        properties_match, results = run_analysis(mode, distorted, reference, output_dir, temp_dir=temp_dir)
         if not properties_match and results is None:
             print_line("SKIPPED (property mismatch)", force=True)
         print_separator()
@@ -321,10 +321,10 @@ def vqcheck(args, temp_dir):
             matching_properties += 1
             
         if results:
-            if 'psnr' in args.mode:
+            if 'psnr' in mode:
                 if results.get('psnr_avg', 0) == float('inf'):
                     perfect_match += 1
-            elif 'lpips' in args.mode:
+            elif 'lpips' in mode:
                 if results.get('metadata', {}).get('mean_distance', 1) == 0:
                     perfect_match += 1
             else:
@@ -334,7 +334,7 @@ def vqcheck(args, temp_dir):
     if total_files > 1:
         print_separator("SUMMARY", newline=True)
         print_key_value("Files Processed", str(total_files))
-        if args.mode in FR_MODES:
+        if mode in FR_MODES:
             print_key_value("Matching Properties", str(matching_properties))
             print_key_value("Perfect Matches", str(perfect_match))
         print_separator()
@@ -343,8 +343,8 @@ def main():
     parser = argparse.ArgumentParser(description='Run video quality analysis comparing a distorted video against a reference video')
     parser.add_argument("-d", '--distorted', required=True, help='Distorted (compressed) video file or folder')
     parser.add_argument("-r", '--reference', help='Reference (original) video file or folder (required for FR methods)')
-    parser.add_argument("-m", '--mode', choices=AVAILABLE_MODES, default='vmaf4k-full')
-    parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory (default: same as distorted file)')
+    parser.add_argument("-m", '--mode', nargs='+', choices=AVAILABLE_MODES, default='vmaf4k-full')
+    parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory')
     parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Enable quiet output')
     parser.add_argument('--rebuild', default=False, action='store_true', help='Delete and rebuild the selected model if applicable')
     parser.add_argument('--tempdir', help='Specify temporary directory to use')
@@ -357,9 +357,23 @@ def main():
         os.makedirs(temp_dir, exist_ok=True)
     else:
         temp_dir = tempfile.mkdtemp(prefix='vqcheck_temp_')
-    
+
+    modes = args.mode if isinstance(args.mode, list) else [args.mode]
+    modes = [mode.strip() for mode in modes]
+    modes = [mode for mode in modes if mode in AVAILABLE_MODES]
+    if len(modes) == 0:
+        print_line("ERROR: No valid modes selected", force=True)
+        return
+    if len(modes) > 1:
+        print_separator()
+        print_line(f"BATCH MODES: {', '.join(modes)}", force=True)
+        print_separator()
+        print()
+
     try:
-        vqcheck(args, temp_dir)
+        for mode in modes:
+            vqcheck(args, mode=mode, temp_dir=temp_dir)
+            print()
     except KeyboardInterrupt:
         print_line("VQCheck stopped by user", force=True)
     finally:
