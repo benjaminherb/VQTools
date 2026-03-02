@@ -2,6 +2,7 @@ import os
 import json
 import argparse
 from collections import defaultdict
+import numpy as np
 from tqdm import tqdm
 
 metric_configs = {
@@ -32,7 +33,8 @@ metric_configs = {
             ('psnr-y', lambda x: x['pooled_metrics']['psnr_y']['mean']),
             ('psnr-cb', lambda x: x['pooled_metrics']['psnr_cb']['mean']),
             ('psnr-cr', lambda x: x['pooled_metrics']['psnr_cr']['mean']),
-            ('psnr-hvs', lambda x: x['pooled_metrics']['psnr_hvs']['mean'])],
+            #('psnr-hvs', lambda x: x['pooled_metrics']['psnr_hvs']['mean'])],
+            ('psnr-hvs', lambda x: np.mean([fs['metrics']['psnr_hvs'] if fs['metrics']['psnr_hvs'] is not None else 60.0 for fs in x['frames']]))], # psnr-hvs is null if one frame is a perfect match (eg two black frames)
     'avqbitsm0': [('avqbitsm0', lambda x: x["per_sequence"])],
     'avqbitsm1': [('avqbitsm1', lambda x: x["per_sequence"])],
     'avqbitsh0f': [('avqbitsh0f', lambda x: x["per_sequence"])],
@@ -40,10 +42,13 @@ metric_configs = {
               ('lpips', lambda x: x["mean_distance"]),
               ('lpips-alex', lambda x: x["lpips-alex"]),
               ('lpips-vgg', lambda x: x["lpips-vgg"])],
+    'lpips-alex': [('lpips-alex', lambda x: x["lpips-alex"])],
+    'lpips-vgg': [('lpips-vgg', lambda x: x["lpips-vgg"])],
     'dover': [('dover', lambda x: x["dover"]),
               ('dover_aesthetic', lambda x: x["cover_res_0"]),
               ('dover_technical', lambda x: x["cover_res_1"]),
               ('dover', lambda x: x["fused_score"]),
+              ('dover', lambda x: x["overall_score"]),
               ('dover_aesthetic', lambda x: x["aesthetic_score"]),
               ('dover_technical', lambda x: x["technical_score"])],
     'cover': [('cover', lambda x: x['fused_score']),
@@ -67,6 +72,7 @@ metric_configs = {
                ('maxvqa_compression', lambda x: x['original vs compressed']),
                ('maxvqa_fluency', lambda x: x['fluent vs choppy']),
                ('maxvqa_clarity', lambda x: x['clear vs severely degraded'])],
+    'mdtvsfa': [('mdtvsfa', lambda x: x['score'])],
     'uvq': [('uvq', lambda x: x['uvq']),
             ('uvq_compression', lambda x: x['compression']),
             ('uvq_content', lambda x: x['content']),
@@ -74,6 +80,7 @@ metric_configs = {
             ('uvq_compression_content', lambda x: x['compression_content']),
             ('uvq_compression_distortion', lambda x: x['compression_distortion']),
             ('uvq_content_distortion', lambda x: x['content_distortion'])],
+    'uvq1p5': [('uvq1p5', lambda x: x['uvq1p5_score'])],
     'fastvqa': [('fastvqa', lambda x: x['score'])],
     'fastervqa': [('fastervqa', lambda x: x['fastervqa_score']),
                   ('fastervqa', lambda x: x['score'])],
@@ -196,9 +203,10 @@ def main():
             for config_item in config:
                 output_key, extractor = config_item
                 try:
-                    if output_key in entry and entry[output_key] is not None:
-                        continue  # Skip if already exists
                     extracted_value = extractor(data)
+                    if extracted_value is None:
+                        raise ValueError(f"Extracted value is None for {output_key} in {metrics[metric_key]}")
+                    #print(f"Extracted {output_key}: {extracted_value} from {metrics[metric_key]}")
                     entry[output_key] = extracted_value
                 except (KeyError, TypeError):
                     errors['failed_extract'][metric_key][output_key].append(metrics[metric_key])
