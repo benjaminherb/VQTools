@@ -300,7 +300,7 @@ def vqcheck(args, mode, temp_dir):
     print_key_value("Jobs", str(len(jobs)))
 
     if is_quiet():
-        print_line(f"VQCheck | Mode: {mode} | Jobs: {len(jobs)}", force=True)
+        print_line(f"VQCheck | Mode: {mode} | Jobs: {len(jobs)} | Output {output_dir}", force=True)
 
     print_key_value("Mode", f"{mode}")
     if not check_model_availability(mode, args.rebuild):

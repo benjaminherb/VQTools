@@ -1,18 +1,21 @@
 import os
+import time
 from datetime import datetime
-from pathlib import Path
 import cv2
 import torch
-import numpy as np
+import contextlib
 from statistics import mean
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, get_video_info
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, get_video_info, \
+    is_quiet
+
 
 
 def check_pyiqa(mode):
     try:
         import pyiqa
-        metric = pyiqa.create_metric(mode, as_loss=False, device='cpu')  # download if needed
+        with contextlib.redirect_stdout(None): # supress model loading messages
+            metric = pyiqa.create_metric(mode, as_loss=False, device='cpu')  # download if needed
     except Exception as e:
         print_line(f"Error checking PyIQA for model {mode}: {e}", force=True)
         return False
@@ -103,7 +106,8 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
         fps = get_video_info(distorted).get('fps', 60)
         stride = max(1, int(fps/2))
 
-        metric = pyiqa.create_metric(mode, as_loss=False, device=device)
+        with contextlib.redirect_stdout(None): # supress model loading messages
+            metric = pyiqa.create_metric(mode, as_loss=False, device=device)
         result = _process_frames_streaming(distorted, reference, metric, device, stride=stride)
 
         frame_scores = list(result.values())
@@ -118,10 +122,13 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
         print_key_value("End Time", ts(end_time))
         print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
         print_key_value("Frames Processed", len(frame_scores))
-        print_key_value("Mean Score", f"{mean_score:.4f}", force=True)
+        print_key_value("Mean Score", f"{mean_score:.4f}")
         print_key_value("Min Score", f"{min_score:.4f}")
         print_key_value("Max Score", f"{max_score:.4f}")
-        
+
+        if is_quiet():
+            print_line(f"{mode.upper()} ({analysis_duration.total_seconds():.0f}s) | {mean_score:.4f} | {os.path.basename(distorted)}", force=True)
+
         results = {
             'timestamp': ts(),
             'distorted': os.path.basename(distorted),
