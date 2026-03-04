@@ -45,7 +45,7 @@ def check_model_availability(mode, rebuild=False):
             return False
 
     if mode in MODES['cvqa']:
-        from metrics.cvqa import check_cvqa
+        from metrics.cvqa.cvqa import check_cvqa
         if not check_cvqa():
             return False
 
@@ -172,7 +172,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
             if ref_info is None or dis_info is None:
                 return properties_match, None
 
-            if (ref_info['width'] != dis_info['width'] or ref_info['height'] != dis_info['height']):
+            if ref_info['width'] != dis_info['width'] or ref_info['height'] != dis_info['height']:
                 scale = (ref_info['width'], ref_info['height'])
                 print_line(f"Scaling distorted video to {scale[0]}x{scale[1]} for analysis", force=True)
             
@@ -190,7 +190,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
         from metrics.vmaf import run_vmaf
         return properties_match, run_vmaf(mode, distorted, reference, scale, reference_fps, output_dir, temp_dir=temp_dir)
     elif mode in MODES['cvqa']:
-        from metrics.cvqa import run_cvqa
+        from metrics.cvqa.cvqa import run_cvqa
         return properties_match, run_cvqa(mode, distorted, reference, output_dir)
     elif mode in MODES['lpips']:
         from metrics.lpips import run_lpips

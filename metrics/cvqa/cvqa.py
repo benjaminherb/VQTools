@@ -6,7 +6,7 @@ from datetime import datetime
 
 from metrics.cvqa.cvqa_fr import run_compressed_vqa_fr
 from metrics.cvqa.cvqa_nr import run_compressed_vqa_nr
-from metrics.utils import get_output_filename, print_key_value, ts, print_line
+from metrics.utils import get_output_filename, print_key_value, ts, print_line, is_quiet
 
 MODEL_LINKS = {
     "UGCVQA_FR_model.pth": "https://drive.google.com/file/d/1ohKNe_r0bXBg7qp4vQj0mDT3CwJPHVMM/view?usp=sharing",
@@ -15,14 +15,15 @@ MODEL_LINKS = {
 
 def check_cvqa():
     missing_models = []
+    model_base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ckpts')
     for model_name in MODEL_LINKS.keys():
-        model_path = os.path.join('models/cvqa/ckpts', model_name)
+        model_path = os.path.join(model_base_path, model_name)
         if not os.path.exists(model_path):
             missing_models.append(model_name)
     
     if missing_models:
         print_line(f"Missing models: {', '.join(missing_models)}", force=True)
-        print_line("Please download them manually from the provided links and add them to the 'models' directory.", force=True)
+        print_line(f"Please download them manually from the provided links and add them to the 'models' directory ({os.path.abspath(model_base_path)})", force=True)
         for model_name in missing_models:
             print_line(f"{model_name}: {MODEL_LINKS[model_name]}", force=True)
         return False
@@ -66,7 +67,9 @@ def run_cvqa(mode, distorted, reference, output_dir=None):
             with open(output_file, 'r') as f:
                 results = json.load(f)
                 score = results.get('score', 0)
-                print_key_value(f"Score", f"{score:.4f}", force=True)
+                print_key_value(f"Score", f"{score:.4f}")
+                if is_quiet():
+                    print_line(f"{mode.upper()} ({analysis_duration.total_seconds():.0f}s) | {score:.4f} | {os.path.basename(distorted)}", force=True)
 
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)
