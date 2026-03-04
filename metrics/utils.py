@@ -6,7 +6,7 @@ from datetime import datetime
 import sys
 import cv2
 import torch
-
+from tqdm import tqdm
 
 ## ------ Video ------ ##
 
@@ -332,9 +332,9 @@ def print_line(text=None, force=False):
         return
 
     if text is None:
-        print()
+        tqdm.write("")
     else:
-        print(text)
+        tqdm.write(text)
 
 def print_separator(text=None, width=40, char='=', newline=False, force=False):
     """Print a separator line with optional centered text."""
@@ -355,9 +355,9 @@ def print_separator(text=None, width=40, char='=', newline=False, force=False):
         separator = char * width
     
     if newline:
-        print()
+        tqdm.write("")
 
-    print(separator)
+    tqdm.write(separator)
 
 
 def print_key_value(key, value, width=40, force=False):
@@ -373,8 +373,8 @@ def print_key_value(key, value, width=40, force=False):
         formatted_line = f"{key_str}{' ' * spaces_needed}{value}"
     else:
         formatted_line = f"{key_str} {value}"
-    
-    print(formatted_line)
+
+    tqdm.write(formatted_line)
 
 
 def ts(time=None):

@@ -3,6 +3,7 @@ import argparse
 import shutil
 from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet, print_line, get_output_filename, is_quiet 
 import tempfile
+from tqdm import tqdm
 
 MODES = {
     'ffmpeg': ['ffmpeg-vmaf4k', 'ffmpeg-vmaf', 'ffmpeg-vmaf4k-full', 'ffmpeg-vmaf-full', 'psnr'],
@@ -80,7 +81,7 @@ def check_model_availability(mode, rebuild=False):
     
     if mode in MODES['fastvqa']:
         from metrics.fastvqa import check_fastvqa
-        if not check_fastvqa():
+        if not check_fastvqa(rebuild=rebuild):
             return False
 
     if mode in MODES['qalign']:
@@ -283,15 +284,9 @@ def vqcheck(args, mode, temp_dir):
         if output_dir.lower() != mode.lower():
             output_dir = os.path.join(args.output, mode)
 
-
     # just print
     if args.output:
         print_key_value("Output", f"{output_dir}")
-
-    
-    if mode in NR_MODES and args.reference:
-        args.reference = None # Ignore reference for NR modes
-
 
     total_files = len(distorted_files)
     matching_properties = 0
@@ -305,8 +300,10 @@ def vqcheck(args, mode, temp_dir):
     print_key_value("Mode", f"{mode}")
     if not check_model_availability(mode, args.rebuild):
         return
-    
-    for (mode, distorted, reference, output_dir) in jobs:
+
+    jobs_progress = tqdm(jobs, unit='video', desc=mode.upper(), bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} {rate_inv_fmt} [{elapsed}<{remaining}]")
+
+    for (mode, distorted, reference, output_dir) in jobs_progress:
 
         print_separator(f"VQCheck ({mode})", newline=True)
         print_key_value("Distorted", distorted)
