@@ -6,7 +6,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator, transcode_video, is_quiet
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator, transcode_video, is_quiet, create_venv, run_in_venv
 
 
 MODEL_FILES = [
@@ -31,8 +31,6 @@ def check_fastvqa(rebuild=False):
         except subprocess.CalledProcessError as e:
             print_line(f"ERROR: Failed to clone FastVQA repository: {e}", force=True)
             return False
-
-
 
         weights_dir = repo / "pretrained_weights"
         weights_dir.mkdir(parents=True, exist_ok=True)
@@ -60,6 +58,11 @@ def check_fastvqa(rebuild=False):
         except Exception as e:
             print_line(f"ERROR: Failed to download pretrained models: {e}", force=True)
             return False
+
+    if not (repo / 'venv').exists():
+        print_line("Creating FAST-VQA/FasterVQA virtual environment...")
+        create_venv(str(repo / 'venv'), python='python3.8', requirements=str(repo / 'requirements.txt'), compile_decord=True)
+        run_in_venv(str(repo / 'venv'), ['pip', 'install', '-e', str(repo)])
 
     return True
 
@@ -97,14 +100,14 @@ def run_fastvqa(mode, distorted, output_dir=None):
                 '-v', os.path.abspath(distorted),
                 '-d', str(device),
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+            result = run_in_venv(str(work_dir / 'venv'), cmd, work_dir=str(work_dir))
 
             if result.returncode != 0 and 'DECORDError' in result.stderr:
                 print_key_value("Transcoding Input", "True")
                 transcoded_path = Path(temp_dir) / "distorted.mkv"
                 transcode_video(distorted, transcoded_path)
                 cmd[5] = os.path.abspath(transcoded_path)
-                result = subprocess.run(cmd, capture_output=True, text=True, cwd=work_dir)
+                result = run_in_venv(str(work_dir / 'venv'), cmd, work_dir=str(work_dir))
 
             if result.returncode != 0:
                 print_line(f"ERROR: FastVQA evaluation failed: {result.stderr}", force=True)
