@@ -6,7 +6,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator, transcode_video
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator, transcode_video, is_quiet
 
 
 MODEL_FILES = [
@@ -15,18 +15,24 @@ MODEL_FILES = [
 ]
 
 
-def check_fastvqa():
+def check_fastvqa(rebuild=False):
     """Clone the FAST-VQA repo if missing and download pretrained weights if needed. """
 
     repo = Path(__file__).parent / "fastvqa"
+
+    if rebuild and repo.exists():
+        subprocess.run(['rm', '-rf', str(repo)], check=True)
+
     if not repo.exists():
         print_separator("BUILDING FAST-VQA", newline=True)
         print_line("Cloning FAST-VQA repository...", force=True)
         try:
-            subprocess.run(['git', 'clone', 'https://github.com/VQAssessment/FAST-VQA-and-FasterVQA', str(repo)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['git', 'clone', '--revision', '9f264e436a97b23f5efb477b048bfbff83565032', 'https://github.com/VQAssessment/FAST-VQA-and-FasterVQA', str(repo)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             print_line(f"ERROR: Failed to clone FastVQA repository: {e}", force=True)
             return False
+
+
 
         weights_dir = repo / "pretrained_weights"
         weights_dir.mkdir(parents=True, exist_ok=True)
@@ -113,6 +119,10 @@ def run_fastvqa(mode, distorted, output_dir=None):
             print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
             if results:
                 print_key_value("Score", results['score'])
+
+                if is_quiet():
+                    print_line(f"{mode_string} ({analysis_duration.total_seconds():.0f}s) | {results['score']} | {os.path.basename(distorted)}", force=True)
+
             if output_file:
                 save_json(results, output_file)
             

@@ -90,7 +90,7 @@ def run_mdtvsfa(mode, distorted, output_dir=None):
         if results:
             print_key_value(f"Score", f"{results['score']:.4f}")
             if is_quiet():
-                print_line(f"Score ({analysis_duration.total_seconds():.0f}s) | {results['score']:.4f} | {os.path.basename(distorted)}", force=True)
+                print_line(f"MDTVSFA ({analysis_duration.total_seconds():.0f}s) | {results['score']:.4f} | {os.path.basename(distorted)}", force=True)
         
         if output_file:
             save_json(results, output_file)

@@ -1,11 +1,10 @@
 
 import os
 import subprocess
-import numpy as np
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, print_separator, create_venv, run_in_venv, modify_file
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, print_separator, create_venv, run_in_venv, modify_file, is_quiet
 
 def check_cvvdp(rebuild=False):
     """Check if ColorVideoVDP is available."""
@@ -67,8 +66,11 @@ def run_cvvdp(mode, distorted, reference, output_dir=None, display='standard_4k'
 
     print_key_value("End Time", ts(end_time))
     print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
-    print_key_value("Score", results.get("score", "N/A"), force=True)
-    
+    print_key_value("Score", results.get("score", "N/A"))
+
+    if is_quiet():
+        print_line(f"CVVDP ({analysis_duration.total_seconds():.0f}s) | {results.get('score', 'N/A')} | {os.path.basename(distorted)}", force=True)
+
     if output_file is not None:
         save_json(results, output_file)
 

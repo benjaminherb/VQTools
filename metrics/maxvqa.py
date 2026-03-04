@@ -1,11 +1,9 @@
 import os
 import subprocess
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from metrics.cover import MODEL_FILES
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line, print_separator, modify_file, create_venv, run_in_venv
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, check_docker, build_docker_image, print_line, print_separator, modify_file, create_venv, run_in_venv, is_quiet
 from metrics.dover import check_dover
 
 
@@ -108,10 +106,13 @@ def run_maxvqa(mode, distorted, reference, output_dir=None):
         print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
 
         if results:
-            print_key_value("Overall Score", f"{results['overall_score']:.4f}", force=True)
+            print_key_value("Overall Score", f"{results['overall_score']:.4f}")
             for key, value in results.items():
                 if key not in ['timestamp', 'distorted', 'overall_score']:
                     print_key_value(f"{key.title()}", f"{value:.4f}")
+
+            if is_quiet():
+                print_line(f"MAXVQA ({analysis_duration.total_seconds():.0f}s) | {results['overall_score']:.4f} | {os.path.basename(distorted)}", force=True)
 
         if output_file:
             save_json(results, output_file)

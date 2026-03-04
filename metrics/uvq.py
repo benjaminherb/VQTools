@@ -6,7 +6,7 @@ from pathlib import Path
 import re
 import json
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info, print_line, print_separator, create_venv, run_in_venv, transcode_video
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_video_info, print_line, print_separator, create_venv, run_in_venv, transcode_video, is_quiet
 
 
 def check_uvq(rebuild=False):
@@ -90,7 +90,7 @@ def run_uvq(mode, distorted, output_dir=None):
             print_key_value("End Time", ts(end_time))
             print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
             if results and mode == 'uvq':
-                print_key_value("UVQ Score", f"{results['compression_content_distortion']:.4f}", force=True)
+                print_key_value("UVQ Score", f"{results['compression_content_distortion']:.4f}")
                 print_key_value("Compression", f"{results['compression']:.4f}")
                 print_key_value("Content", f"{results['content']:.4f}")
                 print_key_value("Distortion", f"{results['distortion']:.4f}")
@@ -98,8 +98,14 @@ def run_uvq(mode, distorted, output_dir=None):
                 print_key_value("Compression+Distortion", f"{results['compression_distortion']:.4f}")
                 print_key_value("Content+Distortion", f"{results['content_distortion']:.4f}")
                 print_key_value("Compression+Content+Distortion", f"{results['compression_content_distortion']:.4f}")
+
+                if is_quiet():
+                    print_line(f"UVQ ({analysis_duration.total_seconds():.0f}s) | {results['compression_content_distortion']:.4f} | {os.path.basename(distorted)}", force=True)
+
             elif results and mode == 'uvq1p5':
-                print_key_value("UVQ 1.5 Score", f"{results['uvq1p5_score']:.4f}", force=True)
+                print_key_value("UVQ 1.5 Score", f"{results['uvq1p5_score']:.4f}")
+                if is_quiet():
+                    print_line(f"UVQ 1.5 ({analysis_duration.total_seconds():.0f}s) | {results['uvq1p5_score']:.4f} | {os.path.basename(distorted)}", force=True)
 
             if output_file:
                 save_json(results, output_file)

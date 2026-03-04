@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime
 from statistics import mean
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, extract_frames
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, extract_frames, is_quiet
 
 def get_command(metric):
     if metric == 'ssimulacra2':
@@ -91,9 +91,12 @@ def run_jpegxl_metric(metric, distorted, reference, output_dir=None):
         print_key_value("End Time", ts(end_time))
         print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
         print_key_value("Frames Processed", len(frame_scores))
-        print_key_value("Mean Score", f"{mean_score:.4f}", force=True)
+        print_key_value("Mean Score", f"{mean_score:.4f}")
         print_key_value("Min Score", f"{min_score:.4f}")
         print_key_value("Max Score", f"{max_score:.4f}")
+
+        if is_quiet():
+            print_line(f"{metric.upper()} ({analysis_duration.total_seconds():.0f}s) | Mean: {mean_score:.4f} | {os.path.basename(distorted)}", force=True)
         
         results = {
             'timestamp': ts(),
