@@ -69,7 +69,10 @@ def run_cvqa(mode, distorted, reference, output_dir=None):
                 score = results.get('score', 0)
                 print_key_value(f"Score", f"{score:.4f}")
                 if is_quiet():
-                    print_line(f"{mode.upper()} ({analysis_duration.total_seconds():.0f}s) | {score:.4f} | {os.path.basename(distorted)}", force=True)
+                    if is_reference_based:
+                        print_line(f"{mode.upper()} ({analysis_duration.total_seconds():.0f}s) | {score:.4f} | {os.path.basename(reference)} | {os.path.basename(distorted)}", force=True)
+                    else:
+                        print_line(f"{mode.upper()} ({analysis_duration.total_seconds():.0f}s) | {score:.4f} | {os.path.basename(distorted)}", force=True)
 
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)

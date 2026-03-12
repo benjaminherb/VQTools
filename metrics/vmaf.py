@@ -81,7 +81,7 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None, 
             print_key_value("MS-SSIM", f"{results['ms_ssim']:.4f}")
 
             if is_quiet():
-                print_line(f"VMAF ({analysis_duration.total_seconds():.0f}s) | {results['vmaf']:.2f} | {os.path.basename(distorted)}", force=True)
+                print_line(f"VMAF ({analysis_duration.total_seconds():.0f}s) | {results['vmaf']:.2f} | {os.path.basename(reference)} | {os.path.basename(distorted)}", force=True)
 
         if output_dir is None and os.path.exists(output_file):
             os.unlink(output_file)

@@ -94,6 +94,8 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
             return None
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
+    is_fr = reference is not None
+
     start_time = datetime.now()
     print_line("\nRESULTS")
     print_key_value("Start Time", ts(start_time))
@@ -127,7 +129,10 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
         print_key_value("Max Score", f"{max_score:.4f}")
 
         if is_quiet():
-            print_line(f"{mode.upper()} ({analysis_duration.total_seconds():.0f}s) | {mean_score:.4f} | {os.path.basename(distorted)}", force=True)
+            if is_fr:
+                print_line(f"{mode.upper()} ({analysis_duration.total_seconds():.0f}s) | {mean_score:.4f} | {os.path.basename(reference)} | {os.path.basename(distorted)}", force=True)
+            else:
+                print_line(f"{mode.upper()} ({analysis_duration.total_seconds():.0f}s) | {mean_score:.4f} | {os.path.basename(distorted)}", force=True)
 
         results = {
             'timestamp': ts(),

@@ -79,5 +79,5 @@ def run_lpips(mode, distorted, reference, output_dir=None, version='0.1'):
 
     print_key_value("LPIPS", "{:.4f}".format(results[f"lpips-{net}"]))
     if is_quiet():
-        print_line(f"LPIPS ({analysis_duration.total_seconds():.0f}s) | {results[f'lpips-{net}']:.4f} | {os.path.basename(distorted)}", force=True)
+        print_line(f"LPIPS-{net.upper()} ({analysis_duration.total_seconds():.0f}s) | {results[f'lpips-{net}']:.4f} | {os.path.basename(reference)} | {os.path.basename(distorted)}", force=True)
     return results

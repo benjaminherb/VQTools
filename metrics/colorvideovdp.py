@@ -69,7 +69,7 @@ def run_cvvdp(mode, distorted, reference, output_dir=None, display='standard_4k'
     print_key_value("Score", results.get("score", "N/A"))
 
     if is_quiet():
-        print_line(f"CVVDP ({analysis_duration.total_seconds():.0f}s) | {results.get('score', 'N/A')} | {os.path.basename(distorted)}", force=True)
+        print_line(f"CVVDP ({analysis_duration.total_seconds():.0f}s) | {results.get('score', 'N/A')} | {os.path.basename(reference)} | {os.path.basename(distorted)}", force=True)
 
     if output_file is not None:
         save_json(results, output_file)

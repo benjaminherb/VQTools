@@ -96,7 +96,7 @@ def run_jpegxl_metric(metric, distorted, reference, output_dir=None):
         print_key_value("Max Score", f"{max_score:.4f}")
 
         if is_quiet():
-            print_line(f"{metric.upper()} ({analysis_duration.total_seconds():.0f}s) | Mean: {mean_score:.4f} | {os.path.basename(distorted)}", force=True)
+            print_line(f"{metric.upper()} ({analysis_duration.total_seconds():.0f}s) | Mean: {mean_score:.4f} | {os.path.basename(reference)} | {os.path.basename(distorted)}", force=True)
         
         results = {
             'timestamp': ts(),
