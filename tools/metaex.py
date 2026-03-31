@@ -228,9 +228,12 @@ def main():
     success = []
     for p in tqdm(files, desc="Extracting metadata", disable=not save_to_file):
         try:
-            out_path = args.output_path.joinpath(p.name).with_suffix(".meta.json")
-            if save_to_file and out_path.exists() and not args.overwrite:
-                continue
+
+            out_path = None
+            if save_to_file:
+                out_path = Path(args.output_path).joinpath(p.name).with_suffix(".meta.json")
+                if save_to_file and out_path.exists() and not args.overwrite:
+                    continue
 
             data = run_ffprobe(p, args.frame_data)
 
