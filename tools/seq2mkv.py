@@ -26,7 +26,7 @@ def get_image_files(folder_path: Path):
     return sorted(parent.glob(pat))
 
 
-def encode_sequence(folder_path: Path, output_path: Path, fps=60, scale=None, codec='ffv1', pix_fmt=None):
+def encode_sequence(folder_path: Path, output_path: Path, fps=60, scale=None, codec='ffv1', options=None, pix_fmt=None):
     input_pattern = get_image_pattern(folder_path)
 
     cmd = [
@@ -39,6 +39,8 @@ def encode_sequence(folder_path: Path, output_path: Path, fps=60, scale=None, co
         "-i",
         input_pattern,
     ]
+    if options:
+        cmd.extend(options.split(" "))
 
     if codec == 'ffvhuff':
         cmd.extend(["-c:v", "ffvhuff"])
@@ -80,6 +82,7 @@ def main():
     parser.add_argument("--codec", "-c", default='ffv1', help="Codec to use for encoding (default: ffv1). Supported: ffv1, ffvhuff, h265")
     parser.add_argument("--pix-fmt", default=None, help="Pixel format to set for ffmpeg")
     parser.add_argument("--output-dir", help="Output directory (default: <root>/mkv)")
+    parser.add_argument('--options', '-opt', type=str, help='Additional ffmpeg options as string')
     parser.add_argument("--dryrun", action="store_true", help="Do not run ffmpeg")
     parser.add_argument("--overwrite", default=False, action="store_true", help="Overwrite existing files")
     args = parser.parse_args()
@@ -119,7 +122,7 @@ def main():
         pix = args.pix_fmt
 
         if not args.dryrun:
-            if encode_sequence(folder, output_path, args.fps, scale_value, args.codec, pix):
+            if encode_sequence(folder, output_path, args.fps, scale_value, args.codec, args.options, pix):
                 success_count += 1
         print("-" * 50)
 
