@@ -102,7 +102,7 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
     
     try:
         device = get_device()
-        if str(device) == 'mps' and mode.lower() == 'niqe':
+        if str(device) == 'mps' and mode.lower() in ('niqe', 'pieapp'):
             device = 'cpu' # NIQE has issues with MPS and float64
 
         fps = get_video_info(distorted).get('fps', 60)

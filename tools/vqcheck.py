@@ -16,16 +16,17 @@ MODES = {
     'uvq': ['uvq', 'uvq1p5'],
     'maxvqa': ['maxvqa'],
     'mdtvsfa': ['mdtvsfa'],
-    'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd'],
+    'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd', 'ahiq', 'pieapp'],
     'jpegxl': ['ssimulacra2', 'butteraugli'],
     'fastvqa': ['fastvqa', 'fastervqa'],
     'qalign': ['qalign'],
     'check': ['check']
 }
 
-FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa']
+FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa', 'finevq']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
+AVAILABLE_MODES.sort()
 
 
 def check_model_availability(mode, rebuild=False):
@@ -87,6 +88,11 @@ def check_model_availability(mode, rebuild=False):
     if mode in MODES['qalign']:
         from metrics.qalign import check_qalign
         if not check_qalign(rebuild=rebuild):
+            return False
+
+    if mode in MODES['finevq']:
+        from metrics.finevq import check_finevq
+        if not check_finevq(rebuild=rebuild):
             return False
 
     return True
@@ -217,6 +223,12 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
     elif mode in MODES['pyiqa']:
         from metrics.pyiqa import run_pyiqa
         return properties_match, run_pyiqa(mode, distorted, reference, output_dir)
+    elif mode in MODES['piq']:
+        from metrics.piq import run_piq
+        return properties_match, run_piq(mode, distorted, reference, output_dir)
+    elif mode in MODES['pieapp']:
+        from metrics.pieapp import run_pieapp
+        return properties_match, run_pieapp(mode, distorted, reference, output_dir)
     elif mode in MODES['jpegxl']:
         from metrics.jpegxl import run_jpegxl_metric
         return properties_match, run_jpegxl_metric(mode, distorted, reference, output_dir)
@@ -226,6 +238,9 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
     elif mode in MODES['qalign']:
         from metrics.qalign import run_qalign
         return properties_match, run_qalign(mode, distorted, output_dir)
+    elif mode in MODES['finevq']:
+        from metrics.finevq import run_finevq
+        return properties_match, run_finevq(mode, distorted, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 
