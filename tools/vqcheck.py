@@ -20,6 +20,7 @@ MODES = {
     'jpegxl': ['ssimulacra2', 'butteraugli'],
     'fastvqa': ['fastvqa', 'fastervqa'],
     'qalign': ['qalign'],
+    'finevq': ['finevq'],
     'check': ['check']
 }
 
