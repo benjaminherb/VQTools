@@ -38,7 +38,12 @@ def transcode(args):
             print(f"Skipping:   {video_file.name} (already exists, use --overwrite to replace)")
             continue
         
-        cmd = ['ffmpeg', '-i', str(video_file)]
+        cmd = ['ffmpeg', ]
+        if not input_is_raw and args.input_framerate is not None: # rewrite input framerate
+            cmd.extend(['-r', str(args.input_framerate)])
+
+        cmd.extend(['-i', str(video_file)])
+
         if input_is_raw:
             cmd = [
                 'ffmpeg',
@@ -99,14 +104,14 @@ def main():
     parser.add_argument('--scale', type=int, nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Scale videos to specified WIDTH and HEIGHT (e.g., --scale 1920 1080)')
     parser.add_argument('--overwrite', action='store_true', help='Overwrite existing files')
     parser.add_argument('--input_resolution', '-ir', nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Input resolution for raw video files')
-    parser.add_argument('--input_framerate', '-ifr', type=float, help='Input framerate for raw video files')
+    parser.add_argument('--input_framerate', '-ifr', type=float, help='Input framerate for raw video files (used to rewrite framerate for non-raw inputs or specify framerate for raw inputs)')
     parser.add_argument('--input_pixel_format', '-ipf', type=str, help='Input pixel format for raw video files (e.g., yuv420p)')
     parser.add_argument('--options', '-opt', type=str, help='Additional ffmpeg options as string')
     parser.add_argument('--dryrun', action='store_true', help='Show commands without executing them')
 
     args = parser.parse_args()
 
-    if any([args.input_resolution, args.input_framerate, args.input_pixel_format]) and not all([args.input_resolution, args.input_framerate, args.input_pixel_format]):
+    if any([args.input_resolution, args.input_pixel_format]) and not all([args.input_resolution, args.input_framerate, args.input_pixel_format]):
         parser.error("When specifying input format options (for raw input), all of --input_resolution, --input_framerate, and --input_pixel_format must be provided.")
     
     input_path = Path(args.input)
