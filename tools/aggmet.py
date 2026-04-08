@@ -91,6 +91,8 @@ metric_configs = {
     'dists': [('dists', lambda x: x['mean_score'])],
     'fsim': [('fsim', lambda x: x['mean_score'])],
     'nlpd': [('nlpd', lambda x: x['mean_score'])],
+    'ahiq': [('ahiq', lambda x: x['mean_score'])],
+    'pieapp': [('pieapp', lambda x: x['mean_score'])],
     'cvvdp': [('cvvdp', lambda x: x['score'])],
     'musiq': [('musiq', lambda x: x['mean_musiq']),
               ('musiq', lambda x: x['mean_score'])],
