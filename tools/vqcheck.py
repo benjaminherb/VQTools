@@ -18,7 +18,7 @@ MODES = {
     'mdtvsfa': ['mdtvsfa'],
     'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd', 'ahiq', 'pieapp', "ahiq"],
     'piq': [],
-    #'pieapp': ['pieapp'],
+    'pieapp': [],
     'jpegxl': ['ssimulacra2', 'butteraugli'],
     'fastvqa': ['fastvqa', 'fastervqa'],
     'qalign': ['qalign'],

@@ -90,7 +90,8 @@ def run_uvq(mode, distorted, output_dir=None):
             print_key_value("End Time", ts(end_time))
             print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
             if results and mode == 'uvq':
-                print_key_value("UVQ Score", f"{results['compression_content_distortion']:.4f}")
+                results['uvq_score'] = results['compression_content_distortion']
+                print_key_value("UVQ Score", f"{results['uvq_score']:.4f}")
                 print_key_value("Compression", f"{results['compression']:.4f}")
                 print_key_value("Content", f"{results['content']:.4f}")
                 print_key_value("Distortion", f"{results['distortion']:.4f}")
@@ -125,7 +126,6 @@ def _parse_uvq_results(stdout):
 
     try:
         results = json.loads(dict_str)
-        # delet if in there 'video_name
         if 'video_name' in results:
             del results['video_name'] # avoid redundant info
 
