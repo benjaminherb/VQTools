@@ -73,6 +73,15 @@ def encode_sequence(folder_path: Path, output_path: Path, fps=60, scale=None, co
         print(e.stderr)
         return False
 
+def get_folders_with_images(root_path):
+    if has_image_files(root_path):
+        return [root_path]
+    image_folders = []
+    for subdir in root_path.iterdir():
+        if not subdir.is_dir():
+            continue
+        image_folders.extend(get_folders_with_images(subdir))
+    return image_folders
 
 def main():
     parser = argparse.ArgumentParser(description="Encode image sequences to MKV using FFmpeg")
@@ -85,6 +94,7 @@ def main():
     parser.add_argument("--detect-fps", action='store_true', help="Detect fps from the filename (eg .._30fps_), otherwise use --fps value")
     parser.add_argument("--output-dir", help="Output directory (default: <root>/mkv)")
     parser.add_argument('--options', '-opt', type=str, help='Additional ffmpeg options as string')
+    parser.add_argument("--recursive", "-r", action="store_true", help="Recurse into subdirectories")
     parser.add_argument("--dryrun", action="store_true", help="Do not run ffmpeg")
     parser.add_argument("--overwrite", default=False, action="store_true", help="Overwrite existing files")
     args = parser.parse_args()
@@ -97,7 +107,11 @@ def main():
     output_dir = Path(args.output_dir) if args.output_dir else root_path / "mkv"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    folders_with_images = [p for p in root_path.iterdir() if p.is_dir() and has_image_files(p)]
+    if args.recursive:
+        folders_with_images = get_folders_with_images(root_path)
+    else:
+        folders_with_images = [p for p in root_path.iterdir() if p.is_dir() and has_image_files(p)]
+
 
     if not folders_with_images:
         print(f"No folders with image sequences found in '{root_path}'")
