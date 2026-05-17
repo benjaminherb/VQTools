@@ -147,15 +147,24 @@ def run_ffprobe(path: Path, extrac_frame_data: bool=False) -> dict:
     return data
 
 
-def collect_files(root: Path, recursive: bool, exts: List[str]):
-    if recursive:
-        for p in root.rglob("*"):
-            if is_media_file(p, exts):
-                yield p
-    else:
-        for p in root.iterdir():
-            if is_media_file(p, exts):
-                yield p
+def collect_files(path: Path, recursive: bool, exts: List[str]):
+    files = []
+
+    if path.is_file():
+        if is_media_file(path, exts):
+            files.append(path)
+
+    elif path.is_dir():
+        if recursive:
+            for p in path.rglob("*"):
+                if is_media_file(p, exts):
+                    files.append(p)
+        else:
+            for p in path.iterdir():
+                if is_media_file(p, exts):
+                    files.append(p)
+
+    return files
 
 
 def write_json(output_path: Path, data: dict):
@@ -201,24 +210,24 @@ def main():
 
     save_to_file = args.output_path is not None
 
+    # set valid video extensions
     exts = set(VIDEO_EXTS)
     if args.ext:
         for e in args.ext:
-            exts.add(e if e.startswith(".") else f".{e}")
+            exts.add(e.lower() if e.startswith(".") else f".{e.lower()}")
+
+    # collect input files
+    input_paths = []
+
+    if args.input_path is not None:
+        input_paths.append(args.input_path)
+
+    if getattr(args, "inputs", None):
+        input_paths.extend(Path(p) for p in args.inputs)
 
     files = []
-    if args.input_path is None and getattr(args, "inputs", None): # positional inputs
-        if len(args.inputs) == 1 and os.path.isdir(args.inputs[0]):
-            input_dir = Path(args.inputs[0])
-            files = list(collect_files(input_dir, args.recursive, list(exts)))
-        files = [Path(p) for p in args.inputs if is_media_file(Path(p), list(exts))]
-    else:
-        input_path: Path = args.input_path
-        input_dir = input_path.parent if input_path.is_file() else input_path
-        if input_path.is_file():
-            files = [input_path] if is_media_file(input_path, list(exts)) else []
-        elif input_path.is_dir():
-            files = list(collect_files(input_path, args.recursive, exts))
+    for path in input_paths:
+        files.extend(collect_files(path, args.recursive, list(exts)))
 
     if not files:
         print("No media files found.")
