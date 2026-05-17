@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import subprocess
 import argparse
 from pathlib import Path
@@ -81,6 +82,7 @@ def main():
                         help="Scale the output to W:H using lanczos. If given without value defaults to 3840:2160.")
     parser.add_argument("--codec", "-c", default='ffv1', help="Codec to use for encoding (default: ffv1). Supported: ffv1, ffvhuff, h265")
     parser.add_argument("--pix-fmt", default=None, help="Pixel format to set for ffmpeg")
+    parser.add_argument("--detect-fps", action='store_true', help="Detect fps from the filename (eg .._30fps_), otherwise use --fps value")
     parser.add_argument("--output-dir", help="Output directory (default: <root>/mkv)")
     parser.add_argument('--options', '-opt', type=str, help='Additional ffmpeg options as string')
     parser.add_argument("--dryrun", action="store_true", help="Do not run ffmpeg")
@@ -121,8 +123,19 @@ def main():
         # use explicit pixel format if provided, otherwise omit the -pix_fmt flag
         pix = args.pix_fmt
 
+        fps = args.fps
+        if args.detect_fps:
+            match_float_framerate = re.search(r'(\d{2,3}(?:\.\d{1,2})?)\s?fps', folder.name, re.IGNORECASE)
+            match_integer_framerate = re.search(r'(\d{2,3})\s?fps', folder.name, re.IGNORECASE)
+            if match_float_framerate: # eg. 23.97fps
+                fps = float(match_float_framerate.group(1))
+            elif match_integer_framerate: # eg 120fps
+                fps = int(match_integer_framerate.group(1))
+            else:
+                print(f"Unable to determine framerate for {folder.name}, using default {fps} fps")
+
         if not args.dryrun:
-            if encode_sequence(folder, output_path, args.fps, scale_value, args.codec, args.options, pix):
+            if encode_sequence(folder, output_path, fps, scale_value, args.codec, args.options, pix):
                 success_count += 1
         print("-" * 50)
 
