@@ -10,8 +10,10 @@ IMAGE_PATTERNS = ["*.png", "*.tiff", "*.tif", "*.jpg", "*.jpeg", "*.exr"]
 
 
 def has_image_files(folder_path: Path):
-    return any(folder_path.glob(p) for p in IMAGE_PATTERNS)
-
+    for pat in IMAGE_PATTERNS:
+        if next(folder_path.glob(pat), None) is not None:
+            return True
+    return False
 
 def get_image_pattern(folder_path: Path):
     for pat in IMAGE_PATTERNS:
@@ -74,12 +76,12 @@ def encode_sequence(folder_path: Path, output_path: Path, fps=60, scale=None, co
         return False
 
 def get_folders_with_images(root_path):
-    if has_image_files(root_path):
-        return [root_path]
     image_folders = []
     for subdir in root_path.iterdir():
         if not subdir.is_dir():
             continue
+        if has_image_files(subdir):
+            image_folders.append(subdir)
         image_folders.extend(get_folders_with_images(subdir))
     return image_folders
 
