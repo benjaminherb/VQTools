@@ -90,7 +90,7 @@ def analyze_video_frames(video_path: Path) -> Tuple[List[Dict], Dict]:
     return frames, stats
 
 
-def run_ffprobe(path: Path, extrac_frame_data: bool=False) -> dict:
+def run_ffprobe(path: Path, extrac_frame_data: bool=False, check_range: bool=True) -> dict:
     cmd = [
         "ffprobe",
         "-v", "error",
@@ -138,14 +138,69 @@ def run_ffprobe(path: Path, extrac_frame_data: bool=False) -> dict:
                 data[k] = float(data[k])
         except ValueError:
             pass
-    
+
+    if check_range:
+        range_info = check_video_value_range(path, data.get("bit_depth"))
+        data.update(range_info)
+
     if extrac_frame_data:
         frames, frame_stats = analyze_video_frames(str(path))
         data.update(frame_stats)
         data['frames'] = frames
 
+
     return data
 
+def check_video_value_range(path: Path, bit_depth: int | None = None) -> dict:
+    cmd = [
+        "ffmpeg",
+        "-i", str(path),
+        "-vf", "signalstats=stat=tout+vrep+brng,metadata=mode=print",
+        "-an",
+        "-f", "null",
+        "-"
+    ]
+
+    proc = subprocess.run(cmd, capture_output=True, text=True)
+
+    ymin_values = []
+    ymax_values = []
+
+    for line in (proc.stderr or "").splitlines():
+        if "lavfi.signalstats.YMIN=" in line:
+            try:
+                ymin_values.append(float(line.split("YMIN=")[-1].strip()))
+            except ValueError:
+                pass
+        elif "lavfi.signalstats.YMAX=" in line:
+            try:
+                ymax_values.append(float(line.split("YMAX=")[-1].strip()))
+            except ValueError:
+                pass
+
+    if not ymin_values or not ymax_values:
+        return {"range": "unknown", "min": None, "max": None}
+
+    ymin = min(ymin_values)
+    ymax = max(ymax_values)
+
+    if bit_depth is None or bit_depth <= 0:
+        bit_depth = 8
+
+    max_code = (2**bit_depth) - 1
+    limited_black = round(16/255 * max_code)
+    limited_white = round(235/255 * max_code)
+
+    if ymin >= limited_black and ymax <= limited_white:
+        range_type = "limited"
+    else:
+        range_type = "full"
+
+    return {
+        "estimated_range": range_type,
+        "y_min": ymin,
+        "y_max": ymax,
+    }
 
 def collect_files(path: Path, recursive: bool, exts: List[str]):
     files = []
@@ -204,6 +259,7 @@ def main():
     parser.add_argument("--output_path", "-o", type=Path, help="Output folder to write per-file metadata JSON")
     parser.add_argument("--recursive", "-r", action="store_true", help="Recurse into subdirectories")
     parser.add_argument("--frame_data", "-f", action="store_true", help="Include per-frame data in output JSON")
+    parser.add_argument("--check_range", "-cr", action="store_true", help="Check the range (full/limited) for each files by checking min/max values")
     parser.add_argument("--ext", "-e", action="append", help="Additional extensions to include (e.g. .avi). Can be used multiple times")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing output files")
     args = parser.parse_args()
@@ -244,7 +300,7 @@ def main():
                 if save_to_file and out_path.exists() and not args.overwrite:
                     continue
 
-            data = run_ffprobe(p, args.frame_data)
+            data = run_ffprobe(p, args.frame_data, args.check_range)
 
             if save_to_file:
                 write_json(out_path, data)
