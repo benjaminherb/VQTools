@@ -34,6 +34,10 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None, 
             return None
         
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    else:
+        temp_fd, output_file = tempfile.mkstemp(prefix='vqcheck_')
+        os.close(temp_fd)
+
     
     start_time = datetime.now()
 
