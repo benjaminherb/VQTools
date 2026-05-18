@@ -72,7 +72,7 @@ def get_video_info(video_path):
 def transcode_video(input_path, output_path, format='ffvhuff', scale=None):
     """Transcode video using ffmpeg to a lossless format."""
     if scale is not None:
-        scale_filter = f"scale={scale}"
+        scale_filter = f"scale={scale[0]}:{scale[1]}"
     else:
         scale_filter = "scale=iw:ih"
 
