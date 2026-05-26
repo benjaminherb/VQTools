@@ -6,7 +6,7 @@ import urllib.request
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator, transcode_video, is_quiet, create_venv, run_in_venv
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, get_device, print_separator, transcode_video, is_quiet, create_venv, run_in_venv, modify_file
 
 
 MODEL_FILES = [
@@ -61,7 +61,8 @@ def check_fastvqa(rebuild=False):
 
     if not (repo / 'venv').exists():
         print_line("Creating FAST-VQA/FasterVQA virtual environment...")
-        create_venv(str(repo / 'venv'), python='python3.8', requirements=str(repo / 'requirements.txt'), compile_decord=True)
+        modify_file(str(repo / 'requirements.txt' ), [{'action': 'replace', 'pattern': 'decord', 'content': 'decord2'}])
+        create_venv(str(repo / 'venv'), python='python3.11', requirements=str(repo / 'requirements.txt'), compile_decord=False)
         run_in_venv(str(repo / 'venv'), ['pip', 'install', '-e', str(repo)])
 
     return True

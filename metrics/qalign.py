@@ -32,9 +32,10 @@ def check_qalign(rebuild=False):
             ])
 
             print_line("Creating virtual environment...")
-            create_venv(str(venv_path), python='python3.8', compile_decord=True)
+            create_venv(str(venv_path), python='python3.11', compile_decord=False)
+            modify_file(str(repo_path / 'pyproject.toml'), [{'action': 'replace', 'pattern': 'decord', 'content': 'decord2'}])
             run_in_venv(str(venv_path), ['pip', 'install', '-e', str(repo_path)])
-            run_in_venv(str(venv_path), ['pip', 'install', 'numpy==1.24.3', 'protobuf'])
+            run_in_venv(str(venv_path), ['pip', 'install', 'numpy==1.26.4', 'protobuf', 'scipy==1.13.1'])
 
 
         except Exception as e:
