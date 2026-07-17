@@ -9,6 +9,7 @@ MODES = {
     'ffmpeg': ['ffmpeg-vmaf4k', 'ffmpeg-vmaf', 'ffmpeg-vmaf4k-full', 'ffmpeg-vmaf-full', 'psnr'],
     'vmaf': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full'],
     'cvqa': ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms'],
+    'cvqahdr': ['cvqa-hdr-nr', 'cvqa-hdr-fr'],
     'lpips': ['lpips-alex', 'lpips-vgg'],
     'dover': ['dover'],
     'cover': ['cover'],
@@ -16,7 +17,7 @@ MODES = {
     'uvq': ['uvq', 'uvq1p5'],
     'maxvqa': ['maxvqa'],
     'mdtvsfa': ['mdtvsfa'],
-    'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd', 'ahiq', 'pieapp', "ahiq"],
+    'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd', 'ahiq', 'pieapp'],
     'piq': [],
     'pieapp': [],
     'jpegxl': ['ssimulacra2', 'butteraugli'],
@@ -26,8 +27,8 @@ MODES = {
     'check': ['check']
 }
 
-FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa', 'finevq']
+FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'cvqa-hdr-fr', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-hdr-nr', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa', 'finevq']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 AVAILABLE_MODES.sort()
 
@@ -51,6 +52,11 @@ def check_model_availability(mode, rebuild=False):
     if mode in MODES['cvqa']:
         from metrics.cvqa.cvqa import check_cvqa
         if not check_cvqa():
+            return False
+
+    if mode in MODES['cvqahdr']:
+        from metrics.cvqahdr import check_cvqahdr
+        if not check_cvqahdr(rebuild=rebuild):
             return False
 
     if mode in MODES['cvvdp']:
@@ -201,6 +207,9 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
     elif mode in MODES['cvqa']:
         from metrics.cvqa.cvqa import run_cvqa
         return properties_match, run_cvqa(mode, distorted, reference, output_dir)
+    elif mode in MODES['cvqahdr']:
+        from metrics.cvqahdr import run_cvqahdr
+        return properties_match, run_cvqahdr(mode, distorted, reference, output_dir)
     elif mode in MODES['lpips']:
         from metrics.lpips import run_lpips
         return properties_match, run_lpips(mode, distorted, reference, output_dir)
