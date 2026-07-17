@@ -9,7 +9,6 @@ from metrics.utils import get_output_filename, save_json, print_key_value, ts, p
 
 REPO_URL = 'https://github.com/sunwei925/CompressedVQA-HDR.git'
 
-# Dropbox share links with dl=1 stream the raw file instead of the preview page, so these can be fetched directly.
 MODEL_LINKS = {
     "FR_HDR_VQA.pth": "https://www.dropbox.com/scl/fi/6745joi51g3fuubg2n87i/FR_HDR_VQA.pth?rlkey=atdpom6x6lmosk9tjqijbm44r&st=qcyio5gj&dl=1",
     "FR_HDR_VQA.npy": "https://www.dropbox.com/scl/fi/3po4q1e3ojfmvs6f83ow6/FR_HDR_VQA.npy?rlkey=pqb6jvzj2g2qdjpt7tnq8uueo&st=x9lqun6p&dl=1",
@@ -32,12 +31,13 @@ def check_cvqahdr(rebuild=False):
         try:
             subprocess.run(['git', 'clone', REPO_URL, str(repo)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-            # Loading a checkpoint saved from a CUDA run fails on CPU/MPS-only machines without map_location
             modify_file(str(repo / 'NR' / 'VQA_NR.py'), [
-                {'action': 'replace', 'pattern': 'model.load_state_dict(torch.load(args.model_path))', 'content': 'model.load_state_dict(torch.load(args.model_path, map_location=torch.device(device)))'}
+                {'action': 'replace', 'pattern': 'model.load_state_dict(torch.load(args.model_path))', 'content': 'model.load_state_dict(torch.load(args.model_path, map_location=torch.device(device)))'},
+                {'action': 'replace', 'pattern': '(video_read_index < video_length) and', 'content': '(video_read_index < video_length_read) and'}
             ])
             modify_file(str(repo / 'FR' / 'VQA_FR.py'), [
-                {'action': 'replace', 'pattern': 'model.load_state_dict(torch.load(args.model_path))', 'content': 'model.load_state_dict(torch.load(args.model_path, map_location=torch.device(device)))'}
+                {'action': 'replace', 'pattern': 'model.load_state_dict(torch.load(args.model_path))', 'content': 'model.load_state_dict(torch.load(args.model_path, map_location=torch.device(device)))'},
+                {'action': 'replace', 'pattern': '(video_read_index < video_length) and', 'content': '(video_read_index < video_length_read) and'}
             ])
         except subprocess.CalledProcessError as e:
             print_line(f"ERROR: Failed to clone CompressedVQA-HDR repository: {e}", force=True)
@@ -63,7 +63,6 @@ def check_cvqahdr(rebuild=False):
 
     if not (repo / 'venv').exists():
         print_line("Creating CompressedVQA-HDR virtual environment...")
-        # requirements.txt pins numpy==1.24.3 but scipy==1.16.1 needs numpy>=1.25.2, so install compatible pins directly instead
         create_venv(str(repo / 'venv'), python='python3.11')
         run_in_venv(str(repo / 'venv'), ['pip', 'install', 'numpy==1.26.4', 'opencv-python==4.11.0.86', 'Pillow==11.3.0', 'scipy==1.16.1', 'torch==2.4.1', 'torchvision==0.19.1', 'open_clip_torch'])
 
