@@ -114,9 +114,9 @@ metric_configs = {
               ('cover_technical', lambda x: x['technical_score']),
               ('cover_semantic', lambda x: x['semantic_score'])],
     'lava':[('lava', lambda x: x['score']),
-            ('lava-synthetic', lambda x: x['head_scores']['synthetic']),
-            ('lava-lsvq', lambda x: x['head_scores']['lsvq']),
-            ('lava-pnats', lambda x: x['head_scores']['pnats']),
+            ('lava_synthetic', lambda x: x['head_scores']['synthetic']),
+            ('lava_lsvq', lambda x: x['head_scores']['lsvq']),
+            ('lava_pnats', lambda x: x['head_scores']['pnats']),
             ],
     # OTHER
     'siti': [('si', lambda x: x['aggregated_statistics']['si']['mean']),
