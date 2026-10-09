@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 from datetime import datetime
 import sys
+import shutil
 import cv2
 import torch
 from tqdm import tqdm
@@ -102,6 +103,14 @@ def extract_frames(video_path, temp_dir, fps=2):
 
 ## ------ Virtual Environment ------ ##
 
+def _use_uv():
+    try:
+        subprocess.run(['uv', '--version'], capture_output=True, check=True)
+        return True
+    except (OSError, subprocess.CalledProcessError):
+        return False
+
+
 def _use_conda():
     if os.path.exists(os.path.join(sys.prefix, 'conda-meta')):
         return True
@@ -110,8 +119,13 @@ def _use_conda():
 def create_venv(venv_path, python='python3.12', requirements=None, compile_decord=False):
     """Create a virtual environment at the specified path."""
     try:
-        # check if python version exists
-        if _use_conda():
+        # check if python version exists and prefer uv over conda over venv
+        if _use_uv():
+            result = subprocess.run(['uv', 'venv', '--seed', '--python', python.replace("python", ""), venv_path], check=True)
+            if result.returncode != 0:
+                print_line(f"ERROR: Failed to create uv environment at {venv_path}", force=True)
+                return False
+        elif _use_conda():
             result = subprocess.run(['conda', 'create', '-y', '-p', venv_path, f'python={python.replace("python", "")}'], check=True)
             if result.returncode != 0:
                 print_line(f"ERROR: Failed to create conda environment at {venv_path}", force=True)
@@ -165,8 +179,16 @@ def run_in_venv(venv_path, command, work_dir=None):
     else:
         env['VIRTUAL_ENV'] = venv_path
         env['PATH'] = f"{os.path.join(venv_path, 'bin')}:{env.get('PATH', '')}"
-    
+
     try:
+        # route pip through uv with fall back to pip if uv fails
+        if _use_uv() and command and os.path.basename(command[0]) == 'pip':
+            uv_command = ['uv', 'pip'] + list(command[1:])
+            result = subprocess.run(uv_command, capture_output=True, text=True, cwd=str(work_dir), env=env)
+            if result.returncode == 0:
+                return result
+            print_line(f"WARNING: Command {' '.join(uv_command)} failed, retrying with pip: {result.stderr}", force=True)
+
         result = subprocess.run(command, capture_output=True, text=True, cwd=str(work_dir), env=env)
         if result.returncode != 0:
             print_line(f"ERROR: Command {' '.join(command)} failed with error: {result.stderr}", force=True)
