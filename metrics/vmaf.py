@@ -71,7 +71,7 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None, 
         print_key_value("End Time", ts(end_time))
         print_key_value("Duration", f"{analysis_duration.total_seconds():.2f}s")
 
-        results = parse_vmaf_results(output_file, distorted, reference)
+        results = parse_vmaf_results(output_file, distorted, reference, mode)
         if results:
             print_key_value("VMAF", f"{results['vmaf']:.2f}")
             if 'full' in mode:
@@ -101,13 +101,13 @@ def run_vmaf(mode, distorted, reference, scale=None, fps=None, output_dir=None, 
             os.unlink(output_file)
         return None
 
-def parse_vmaf_results(output_file, distorted=None, reference=None):
+def parse_vmaf_results(output_file, distorted=None, reference=None, mode='vmaf'):
     try:
         with open(output_file, 'r') as f:
             data = json.load(f)
-        
+
         pooled_metrics = data.get('pooled_metrics', {})
-        vmaf_score = pooled_metrics.get('vmaf', {}).get('mean', 0)
+        vmaf_score = pooled_metrics.get(get_model_name(mode), {}).get('mean', 0)
         vmaf_neg_score = pooled_metrics.get('vmaf_neg', {}).get('mean', 0)
         psnr_y_score = pooled_metrics.get('psnr_y', {}).get('mean', 0)
         psnr_cb_score = pooled_metrics.get('psnr_cr', {}).get('mean', 0)
@@ -135,14 +135,27 @@ def parse_vmaf_results(output_file, distorted=None, reference=None):
         return None
 
 
+def get_model_name(mode):
+    name = 'vmaf4k' if '4k' in mode else 'vmaf'
+    if 'v1' in mode:
+        name += '-v1'
+    return name
+
+
 def get_arguments(mode):
     args = []
-    if '4k' in mode:
-        args.extend(['--model', 'version=vmaf_4k_v0.6.1'])
+    name = get_model_name(mode)
+    if 'v1' in mode:
+        if '4k' in mode:
+            args.extend(['--model', f'version=vmaf_v1.0.16_1d5h_2160:name={name}'])
+        else:
+            args.extend(['--model', f'version=vmaf_v1.0.16_3d0h:name={name}'])
+    elif '4k' in mode:
+        args.extend(['--model', f'version=vmaf_4k_v0.6.1:name={name}'])
         if 'full' in mode:
             args.extend(['--model', 'version=vmaf_4k_v0.6.1neg:name=vmaf_neg'])
     else:
-        args.extend(['--model', 'version=vmaf_v0.6.1'])
+        args.extend(['--model', f'version=vmaf_v0.6.1:name={name}'])
         if 'full' in mode:
             args.extend(['--model', 'version=vmaf_v0.6.1neg:name=vmaf_neg'])
 

@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 MODES = {
     'ffmpeg': ['ffmpeg-vmaf4k', 'ffmpeg-vmaf', 'ffmpeg-vmaf4k-full', 'ffmpeg-vmaf-full', 'psnr'],
-    'vmaf': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full'],
+    'vmaf': ['vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'vmaf4k-v1', 'vmaf-v1'],
     'cvqa': ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-fr', 'cvqa-fr-ms'],
     'cvqahdr': ['cvqa-hdr-nr', 'cvqa-hdr-fr'],
     'lpips': ['lpips-alex', 'lpips-vgg'],
@@ -27,7 +27,7 @@ MODES = {
     'check': ['check']
 }
 
-FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'cvqa-hdr-fr', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp']
+FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'vmaf4k-v1', 'vmaf-v1', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'cvqa-hdr-fr', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp']
 NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-hdr-nr', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa', 'finevq']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 AVAILABLE_MODES.sort()
