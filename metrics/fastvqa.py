@@ -27,7 +27,8 @@ def check_fastvqa(rebuild=False):
         print_separator("BUILDING FAST-VQA", newline=True)
         print_line("Cloning FAST-VQA repository...", force=True)
         try:
-            subprocess.run(['git', 'clone', '--revision', '9f264e436a97b23f5efb477b048bfbff83565032', 'https://github.com/VQAssessment/FAST-VQA-and-FasterVQA', str(repo)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['git', 'clone', 'https://github.com/VQAssessment/FAST-VQA-and-FasterVQA', str(repo)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(['git', '-C', str(repo), 'checkout', '9f264e436a97b23f5efb477b048bfbff83565032'], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         except subprocess.CalledProcessError as e:
             print_line(f"ERROR: Failed to clone FastVQA repository: {e}", force=True)
             return False
@@ -64,6 +65,10 @@ def check_fastvqa(rebuild=False):
         modify_file(str(repo / 'requirements.txt' ), [{'action': 'replace', 'pattern': 'decord', 'content': 'decord2'}])
         create_venv(str(repo / 'venv'), python='python3.11', requirements=str(repo / 'requirements.txt'), compile_decord=False)
         run_in_venv(str(repo / 'venv'), ['pip', 'install', '-e', str(repo)])
+
+    # remove libnvblas to avoid issues running on CPU (not needed)
+    for lib in (repo / 'venv').glob('lib*/python*/site-packages/nvidia/*/lib/libnvblas.so*'):
+        lib.unlink()
 
     return True
 

@@ -42,6 +42,10 @@ def check_qalign(rebuild=False):
             print_line(f"ERROR: Failed to build Q-Align - {e}", force=True)
             return False
 
+    # remove libnvblas to avoid issues running on CPU (not needed)
+    for lib in venv_path.glob('lib*/python*/site-packages/nvidia/*/lib/libnvblas.so*'):
+        lib.unlink()
+
     return True
 
 
