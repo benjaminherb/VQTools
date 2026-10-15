@@ -32,7 +32,7 @@ done
 if [ "$COMPAT_MODE" -eq 1 ]; then
     PYTHON_BIN="python3.10"
 else
-    PYTHON_BIN="python3.12"
+    PYTHON_BIN="python3.14"
 fi
 
 echo "Using python interpreter: $PYTHON_BIN"
