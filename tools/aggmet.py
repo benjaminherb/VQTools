@@ -21,8 +21,6 @@ metric_configs = {
             ('vmaf', lambda x: x['pooled_metrics']['vmaf']['mean']),
             ('vmaf4k', lambda x: x['pooled_metrics']['vmaf_4k']['mean']),
             ('vmaf4k', lambda x: x['pooled_metrics']['vmaf4k']['mean']),
-            ('vmaf-v1', lambda x: x['pooled_metrics']['vmaf-v1']['mean']),
-            ('vmaf4k-v1', lambda x: x['pooled_metrics']['vmaf4k-v1']['mean']),
             ('vmaf-neg', lambda x: x['pooled_metrics']['vmaf_neg']['mean']),
             ('vif-scale0', lambda x: x['pooled_metrics']['integer_vif_scale0']['mean']),
             ('vif-scale0-egl', lambda x: x['pooled_metrics']['integer_vif_scale0_egl_1']['mean']),
@@ -38,7 +36,27 @@ metric_configs = {
             ('adm-scale2', lambda x: x['pooled_metrics']['integer_adm_scale2']['mean']),
             ('adm-scale3', lambda x: x['pooled_metrics']['integer_adm_scale3']['mean']),
             ('motion', lambda x: x['pooled_metrics']['integer_motion']['mean']),
-            ('motion2', lambda x: x['pooled_metrics']['integer_motion2']['mean'])],
+            ('motion2', lambda x: x['pooled_metrics']['integer_motion2']['mean']),
+            # vmaf v1 / extended feature set
+            ('vmaf-v1', lambda x: x['pooled_metrics']['vmaf-v1']['mean']),
+            ('vmaf4k-v1', lambda x: x['pooled_metrics']['vmaf4k-v1']['mean']),
+            ('psnr-hvs-y', lambda x: np.mean([fs['metrics']['psnr_hvs_y'] if fs['metrics']['psnr_hvs_y'] is not None else 60.0 for fs in x['frames']])),
+            ('psnr-hvs-cb', lambda x: np.mean([fs['metrics']['psnr_hvs_cb'] if fs['metrics']['psnr_hvs_cb'] is not None else 60.0 for fs in x['frames']])),
+            ('psnr-hvs-cr', lambda x: np.mean([fs['metrics']['psnr_hvs_cr'] if fs['metrics']['psnr_hvs_cr'] is not None else 60.0 for fs in x['frames']])),
+            ('cambi', lambda x: x['pooled_metrics']['cambi_hrs_1080_cmxv_17_vlt_0.06']['mean']),
+            ('speed-chroma-u', lambda x: x['pooled_metrics']['speed_chroma_u_mxv_45_nnf_0.1_snn_0.19_wvm_5']['mean']),
+            ('speed-chroma-v', lambda x: x['pooled_metrics']['speed_chroma_v_mxv_45_nnf_0.1_snn_0.19_wvm_5']['mean']),
+            ('speed-chroma-uv', lambda x: x['pooled_metrics']['speed_chroma_uv_mxv_45_nnf_0.1_snn_0.19_wvm_5']['mean']),
+            ('adm2-v1', lambda x: x['pooled_metrics']['integer_adm2_csf_2_dlmw_0.7_egl_1_min_0.5_nw_0.02']['mean']),
+            ('adm3-v1', lambda x: x['pooled_metrics']['integer_adm3_csf_2_dlmw_0.7_egl_1_min_0.5_nw_0.02']['mean']),
+            ('aim-v1', lambda x: x['pooled_metrics']['integer_aim_csf_2_dlmw_0.7_egl_1_min_0.5_nw_0.02']['mean']),
+            ('adm-scale0-v1', lambda x: x['pooled_metrics']['integer_adm_scale0_csf_2_dlmw_0.7_egl_1_min_0.5_nw_0.02']['mean']),
+            ('adm-scale1-v1', lambda x: x['pooled_metrics']['integer_adm_scale1_csf_2_dlmw_0.7_egl_1_min_0.5_nw_0.02']['mean']),
+            ('adm-scale2-v1', lambda x: x['pooled_metrics']['integer_adm_scale2_csf_2_dlmw_0.7_egl_1_min_0.5_nw_0.02']['mean']),
+            ('adm-scale3-v1', lambda x: x['pooled_metrics']['integer_adm_scale3_csf_2_dlmw_0.7_egl_1_min_0.5_nw_0.02']['mean']),
+            ('motion-sad-v1', lambda x: x['pooled_metrics']['VMAF_integer_feature_motion_sad_score_mmxv_18']['mean']),
+            ('motion2-v1', lambda x: x['pooled_metrics']['integer_motion2_mmxv_18']['mean']),
+            ('motion3-v1', lambda x: x['pooled_metrics']['integer_motion3_mmxv_18']['mean'])],
     'ssimulacra2': [('ssimulacra2', lambda x: x['mean_score'])],
     'butteraugli': [('butteraugli', lambda x: x['mean_score'])],
     'cvvdp': [('cvvdp', lambda x: x['score'])],
@@ -173,8 +191,8 @@ def main():
             else:
                 consolidated_data = existing_data
     
-    metric_files = defaultdict(dict)
-    
+    metric_files = defaultdict(lambda: defaultdict(list))
+
     for root, dirs, files in os.walk(args.metrics_dir):
         for filename in files:
             if not filename.endswith('.json') or filename.startswith('.'):
@@ -184,7 +202,7 @@ def main():
             if not base_name:
                 continue
             
-            metric_files[base_name][metric_type] = os.path.join(root, filename)
+            metric_files[base_name][metric_type].append(os.path.join(root, filename))
     
     errors = {
         'failed_load': [],
@@ -200,38 +218,47 @@ def main():
                 'name': base_name,
             }
 
-        if 'meta' in metrics:
-            metadata = load_json_if_exists(metrics['meta'])
+        for meta_path in sorted(metrics.get('meta', [])):
+            metadata = load_json_if_exists(meta_path)
             for key, value in metadata.items():
                 if key not in args.exclude_keys:
                     consolidated_data[base_name][key] = value
 
         entry = consolidated_data[base_name]
-         
+
         for metric_key, config in metric_configs.items():
             if not metric_key in metrics:
                 continue
 
-            data = load_json_if_exists(metrics[metric_key])
-            if not data:
-                errors['failed_load'].append(metrics[metric_key])
-                continue
+            paths = sorted(metrics[metric_key])
+            extracted_keys = set()
+            for path in paths:
+                data = load_json_if_exists(path)
+                if not data:
+                    errors['failed_load'].append(path)
+                    continue
 
-            for config_item in config:
-                output_key, extractor = config_item
-                try:
-                    extracted_value = extractor(data)
-                    if extracted_value is None:
-                        raise ValueError(f"Extracted value is None for {output_key} in {metrics[metric_key]}")
-                    #print(f"Extracted {output_key}: {extracted_value} from {metrics[metric_key]}")
-                    entry[output_key] = extracted_value
-                except (KeyError, TypeError):
-                    errors['failed_extract'][metric_key][output_key].append(metrics[metric_key])
+                for config_item in config:
+                    output_key, extractor = config_item
+                    try:
+                        extracted_value = extractor(data)
+                        if extracted_value is None:
+                            raise ValueError(f"Extracted value is None for {output_key} in {path}")
+                        #print(f"Extracted {output_key}: {extracted_value} from {path}")
+                        entry[output_key] = extracted_value
+                        extracted_keys.add(output_key)
+                    except (KeyError, TypeError):
+                        pass
+
+            # only report a failure if no file of this metric type provided the key
+            for output_key, _ in config:
+                if output_key not in extracted_keys:
+                    errors['failed_extract'][metric_key][output_key].append(', '.join(paths))
 
     
     output_list = list(consolidated_data.values())
     
-    total_metric_files = sum(len(metrics) for metrics in metric_files.values())
+    total_metric_files = sum(len(paths) for metrics in metric_files.values() for paths in metrics.values())
     
     all_metric_keys = set()
     metric_coverage = defaultdict(int)
