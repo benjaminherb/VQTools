@@ -102,6 +102,24 @@ Example:
 transcode -i ./videos -o ./converted --codec ffvhuff
 ```
 
+### vca
+Calculate spatial/temporal complexity features with [VCA](https://github.com/cd-athena/VCA) (Video Complexity Analyzer). Videos are decoded with ffmpeg and piped to VCA as Y4M. Results are stored in a `*.vca.json` file per video: mean values, per-frame features and detected shots.
+
+Options:
+- `-i/--input` — input video file or directory (required)
+- `-o/--output` — output directory (required)
+- `--pix-fmt` — pixel format passed to VCA (default: `yuv420p`, 8-bit for comparable values across sources)
+- `--block-size` — DCT block size `8`, `16` or `32` (default: 32)
+- `--threads` — VCA threads per video (default: 0 = autodetect)
+- `--workers` — number of parallel videos (default: 0 = serial)
+- `--overwrite` — overwrite existing files
+- `--rebuild` — delete and rebuild VCA
+
+Example:
+```bash
+vca -i ./videos -o ./vca --workers 4
+```
+
 ### aggmet
 Consolidate multiple metric JSON files into a single JSON report. The script scans a directory tree for `*.method.json` files and groups them by base video name.
 

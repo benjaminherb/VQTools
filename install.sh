@@ -60,6 +60,10 @@ echo "# Copying tools, metrics, and requirements"
 cp -r ./tools "${SHARE_DIR}/"
 cp -r ./metrics "${SHARE_DIR}/"
 cp ./requirements.txt "${SHARE_DIR}/"
+if [ -d ./vca ] && [ ! -d "${SHARE_DIR}/vca" ]; then
+    echo "# Copying local VCA build"
+    cp -r ./vca "${SHARE_DIR}/"
+fi
 
 cd "$SHARE_DIR"
 
@@ -127,6 +131,13 @@ if ! pip show decord &> /dev/null; then
 fi
 
 cd "$SHARE_DIR"
+
+echo "# Building VCA"
+VCA_ARGS=(--build-only)
+if [ "$REBUILD" -eq 1 ]; then
+    VCA_ARGS+=(--rebuild)
+fi
+python tools/vca.py "${VCA_ARGS[@]}" || echo "WARNING: VCA build failed, the vca tool will not work until it is built"
 
 TOOLS=($(ls tools/*.py 2>/dev/null))
 
