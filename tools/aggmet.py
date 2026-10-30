@@ -142,6 +142,14 @@ metric_configs = {
     # OTHER
     'siti': [('si', lambda x: x['aggregated_statistics']['si']['mean']),
              ('ti', lambda x: x['aggregated_statistics']['ti']['mean'])],
+    'vca': [('vca-E', lambda x: x['mean']['E']),
+            ('vca-h', lambda x: x['mean']['h']),
+            ('vca-epsilon', lambda x: x['mean']['epsilon']),
+            ('vca-L', lambda x: x['mean']['L']),
+            ('vca-avgU', lambda x: x['mean']['avgU']),
+            ('vca-energyU', lambda x: x['mean']['energyU']),
+            ('vca-avgV', lambda x: x['mean']['avgV']),
+            ('vca-energyV', lambda x: x['mean']['energyV'])],
     'clip': [('clip', lambda x: x['clip'][0])]
 }
 
