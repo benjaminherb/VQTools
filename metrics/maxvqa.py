@@ -57,7 +57,8 @@ def check_maxvqa():
             print_line("Creating MAXVQA virtual environment...")
             create_venv(str(repo / 'venv'), python='python3.10', compile_decord=True)
             run_in_venv(str(repo / 'venv'), ['pip', 'install', 'pyyaml', 'scipy', 'scikit-learn', 'numpy==1.24.3', 'opencv-python'])
-            subprocess.run(['git', 'clone', 'https://github.com/mlfoundations/open_clip.git', str(repo / 'open_clip')], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            # pinned: newer open_clip requires torch>=2.1 (torch.compiler)
+            subprocess.run(['git', 'clone', '--branch', 'v2.20.0', '--depth', '1', 'https://github.com/mlfoundations/open_clip.git', str(repo / 'open_clip')], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             modify_file(str(repo / 'open_clip' / 'src' / 'open_clip' / 'modified_resnet.py'), [
                 {'action': 'replace', 'pattern': 'return x[0]', 'content': 'return x'}
             ])

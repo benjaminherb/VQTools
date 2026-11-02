@@ -8,3 +8,4 @@ Pillow
 tensorflow
 pyiqa
 scikit-video
+setuptools<81
