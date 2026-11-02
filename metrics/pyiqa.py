@@ -27,7 +27,7 @@ def _preprocess_frame(frame, device):
     frame_tensor = frame_tensor.unsqueeze(0).to(device)  # Add batch dimension
     return frame_tensor
 
-def _process_frames_streaming(video_path, reference_path, metric, device, stride=1):
+def _process_frames_streaming(video_path, reference_path, metric, device, stride=1, scale=None):
     """Process frames from video one by one"""
 
     is_fr = reference_path is not None
@@ -56,6 +56,8 @@ def _process_frames_streaming(video_path, reference_path, metric, device, stride
                 ret, frame_ref = cap_ref.read()
                 
             if frame_number % stride == stride // 2:
+                if scale is not None and (frame.shape[1], frame.shape[0]) != tuple(scale):
+                    frame = cv2.resize(frame, tuple(scale), interpolation=cv2.INTER_CUBIC)
                 frame_tensor = _preprocess_frame(frame, device)
                 
                 try:
@@ -72,7 +74,9 @@ def _process_frames_streaming(video_path, reference_path, metric, device, stride
             frame_number += 1
 
         cap.release()
-        
+        if cap_ref is not None:
+            cap_ref.release()
+
         if not frame_scores:
             raise Exception(f"No frames processed from video: {video_path}")
             
@@ -82,7 +86,7 @@ def _process_frames_streaming(video_path, reference_path, metric, device, stride
         raise Exception(f"Error processing frames: {e}")
 
 
-def run_pyiqa(mode, distorted, reference, output_dir=None):
+def run_pyiqa(mode, distorted, reference, output_dir=None, scale=None):
     """Run PyIQA video quality assessment."""
     import pyiqa
 
@@ -110,7 +114,7 @@ def run_pyiqa(mode, distorted, reference, output_dir=None):
 
         with contextlib.redirect_stdout(None): # supress model loading messages
             metric = pyiqa.create_metric(mode, as_loss=False, device=device)
-        result = _process_frames_streaming(distorted, reference, metric, device, stride=stride)
+        result = _process_frames_streaming(distorted, reference, metric, device, stride=stride, scale=scale)
 
         frame_scores = list(result.values())
 

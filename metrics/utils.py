@@ -94,8 +94,11 @@ def transcode_video(input_path, output_path, format='ffvhuff', scale=None):
         return False
 
 
-def extract_frames(video_path, temp_dir, fps=2):
-    cmd = ["ffmpeg", "-i", video_path, "-vf", f"fps={fps}", os.path.join(temp_dir.name, "frame_%06d.png")]
+def extract_frames(video_path, temp_dir, fps=2, scale=None):
+    vf = f"fps={fps}"
+    if scale is not None:
+        vf += f",scale={scale[0]}:{scale[1]}:flags=bicubic"
+    cmd = ["ffmpeg", "-i", video_path, "-vf", vf, os.path.join(temp_dir.name, "frame_%06d.png")]
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     frame_files = sorted([os.path.join(temp_dir.name, f) for f in os.listdir(temp_dir.name) if f.endswith('.png')])
     return frame_files 

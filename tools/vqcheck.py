@@ -27,7 +27,7 @@ MODES = {
     'check': ['check']
 }
 
-FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'vmaf4k-v1', 'vmaf-v1', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'cvqa-hdr-fr', 'lpips', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp']
+FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'vmaf4k-v1', 'vmaf-v1', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'cvqa-hdr-fr', 'lpips-alex', 'lpips-vgg', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp']
 NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-hdr-nr', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa', 'finevq']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 AVAILABLE_MODES.sort()
@@ -212,7 +212,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
         return properties_match, run_cvqahdr(mode, distorted, reference, output_dir)
     elif mode in MODES['lpips']:
         from metrics.lpips import run_lpips
-        return properties_match, run_lpips(mode, distorted, reference, output_dir)
+        return properties_match, run_lpips(mode, distorted, reference, output_dir, scale=scale)
     elif mode in MODES['dover']:
         from metrics.dover import run_dover
         return properties_match, run_dover(mode, distorted, output_dir)
@@ -234,7 +234,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
         return properties_match, run_mdtvsfa(mode, distorted, output_dir)
     elif mode in MODES['pyiqa']:
         from metrics.pyiqa import run_pyiqa
-        return properties_match, run_pyiqa(mode, distorted, reference, output_dir)
+        return properties_match, run_pyiqa(mode, distorted, reference, output_dir, scale=scale)
     elif mode in MODES['piq']:
         from metrics.piq import run_piq
         return properties_match, run_piq(mode, distorted, reference, output_dir)
@@ -243,7 +243,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
         return properties_match, run_pieapp(mode, distorted, reference, output_dir)
     elif mode in MODES['jpegxl']:
         from metrics.jpegxl import run_jpegxl_metric
-        return properties_match, run_jpegxl_metric(mode, distorted, reference, output_dir)
+        return properties_match, run_jpegxl_metric(mode, distorted, reference, output_dir, scale=scale)
     elif mode in MODES['fastvqa']:
         from metrics.fastvqa import run_fastvqa
         return properties_match, run_fastvqa(mode, distorted, output_dir)

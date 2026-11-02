@@ -8,7 +8,7 @@ import contextlib
 from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, extract_frames, is_quiet
 
 
-def run_lpips(mode, distorted, reference, output_dir=None, version='0.1'):
+def run_lpips(mode, distorted, reference, output_dir=None, version='0.1', scale=None):
 
     net = mode.split('-')[1]  # 'alex' or 'vgg'
     output_file = None
@@ -32,7 +32,7 @@ def run_lpips(mode, distorted, reference, output_dir=None, version='0.1'):
 
     dis_temp_dir = tempfile.TemporaryDirectory()
     ref_temp_dir = tempfile.TemporaryDirectory()
-    distorted_frames = extract_frames(distorted, dis_temp_dir, fps=2)
+    distorted_frames = extract_frames(distorted, dis_temp_dir, fps=2, scale=scale)
     reference_frames = extract_frames(reference, ref_temp_dir, fps=2)
     
     if len(distorted_frames) != len(reference_frames):

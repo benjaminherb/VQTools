@@ -29,11 +29,11 @@ def check_jpegxl(metric):
     return True
 
 
-def _process_frames(distorted_path, reference_path, metric):
+def _process_frames(distorted_path, reference_path, metric, scale=None):
     try:
         dis_temp_dir = tempfile.TemporaryDirectory()
         ref_temp_dir = tempfile.TemporaryDirectory()
-        distorted_frames = extract_frames(distorted_path, dis_temp_dir, fps=2)
+        distorted_frames = extract_frames(distorted_path, dis_temp_dir, fps=2, scale=scale)
         reference_frames = extract_frames(reference_path, ref_temp_dir, fps=2)
     except Exception as e:
         print_line(f"Error extracting frames: {e}", force=True)
@@ -60,7 +60,7 @@ def _process_frames(distorted_path, reference_path, metric):
     return frame_scores
 
 
-def run_jpegxl_metric(metric, distorted, reference, output_dir=None):
+def run_jpegxl_metric(metric, distorted, reference, output_dir=None, scale=None):
     """Run JPEG XL metric."""
 
     output_file = None
@@ -76,7 +76,7 @@ def run_jpegxl_metric(metric, distorted, reference, output_dir=None):
     print_key_value("Start Time", ts(start_time))
     
     try:
-        frame_scores = _process_frames(distorted, reference, metric)
+        frame_scores = _process_frames(distorted, reference, metric, scale=scale)
 
         if not frame_scores:
             raise Exception("No frame scores computed.")
