@@ -24,11 +24,12 @@ MODES = {
     'fastvqa': ['fastvqa', 'fastervqa'],
     'qalign': ['qalign'],
     'finevq': ['finevq'],
+    'campvqa': ['campvqa', 'campvqa-finevd'],
     'check': ['check']
 }
 
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'vmaf4k-v1', 'vmaf-v1', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'cvqa-hdr-fr', 'lpips-alex', 'lpips-vgg', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-hdr-nr', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa', 'finevq']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-hdr-nr', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa', 'finevq', 'campvqa', 'campvqa-finevd']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 AVAILABLE_MODES.sort()
 
@@ -102,6 +103,11 @@ def check_model_availability(mode, rebuild=False):
     if mode in MODES['finevq']:
         from metrics.finevq import check_finevq
         if not check_finevq(rebuild=rebuild):
+            return False
+
+    if mode in MODES['campvqa']:
+        from metrics.campvqa import check_campvqa
+        if not check_campvqa(rebuild=rebuild):
             return False
 
     return True
@@ -253,6 +259,9 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
     elif mode in MODES['finevq']:
         from metrics.finevq import run_finevq
         return properties_match, run_finevq(mode, distorted, output_dir)
+    elif mode in MODES['campvqa']:
+        from metrics.campvqa import run_campvqa
+        return properties_match, run_campvqa(mode, distorted, output_dir)
     else:
         raise ValueError(f"Unknown mode: {mode}")
 

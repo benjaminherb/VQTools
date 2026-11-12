@@ -134,6 +134,8 @@ metric_configs = {
               ('cover_aesthetic', lambda x: x['aesthetic_score']),
               ('cover_technical', lambda x: x['technical_score']),
               ('cover_semantic', lambda x: x['semantic_score'])],
+    'campvqa': [('campvqa', lambda x: x['score'])],
+    'campvqa-finevd': [('campvqa-finevd', lambda x: x['score'])],
     'lava':[('lava', lambda x: x['score']),
             ('lava_synthetic', lambda x: x['head_scores']['synthetic']),
             ('lava_lsvq', lambda x: x['head_scores']['lsvq']),
