@@ -7,11 +7,11 @@ from metrics.utils import get_output_filename, save_json, print_key_value, ts, c
 from metrics.dover import check_dover
 
 
-def check_maxvqa():
+def check_maxvqa(rebuild=False):
     """Check if MAXVQA is available."""
 
     repo = Path(__file__).parent / "maxvqa"
-    if not repo.exists():
+    if rebuild or not repo.exists():
         print_separator("BUILDING MAXVQA", newline=True)
         print_line("Cloning MaxVQA repository...", force=True)
         try:

@@ -71,7 +71,7 @@ def check_model_availability(mode, rebuild=False):
 
     if mode in MODES['maxvqa']:
         from metrics.maxvqa import check_maxvqa
-        if not check_maxvqa():
+        if not check_maxvqa(rebuild=rebuild):
             return False
         
     if mode in MODES['mdtvsfa']:
