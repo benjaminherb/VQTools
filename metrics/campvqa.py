@@ -10,7 +10,6 @@ from metrics.utils import get_output_filename, save_json, print_key_value, ts, p
 
 REPO_URL = 'https://github.com/xinyiW915/CAMP-VQA.git'
 CLIP_URL = 'git+https://github.com/openai/CLIP.git@dcba3cb2e2827b402d2701e7e1c7d9fed8a20ef1'
-
 # mode: (intra_cross_experiment, train_data_name, test_data_name)
 # campvqa:         model trained on LSVQ (kfold)
 # campvqa-finevd:  LSVQ model fine-tuned on FineVD (default of the official demo)
@@ -52,6 +51,10 @@ def check_campvqa(rebuild=False):
                     "        if 'test_video_path' in row and pd.notnull(row['test_video_path']):",
                     "            filename = row['test_video_path']",
                 ]},
+            ])
+            # dl.fbaipublicfiles.com serves an expired TLS certificate: skip verification for the SlowFast weight download
+            modify_file(str(repo / 'src' / 'extractor' / 'extract_slowfast_clip.py'), [
+                {'action': 'replace', 'pattern': 'from pytorchvideo.models.hub import slowfast_r50', 'content': 'from pytorchvideo.models.hub import slowfast_r50; import ssl; ssl._create_default_https_context = ssl._create_unverified_context'},
             ])
         except subprocess.CalledProcessError as e:
             print_line(f"ERROR: Failed to clone CAMP-VQA repository: {e}", force=True)
