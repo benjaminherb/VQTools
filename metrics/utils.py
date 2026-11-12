@@ -147,7 +147,6 @@ def create_venv(venv_path, python='python3.12', requirements=None, compile_decor
             # on MacOS we need to compile decord from source
             if not (sys.platform == 'darwin'):
                 run_in_venv(venv_path, ['pip', 'install', 'decord'])
-                return True
             else:
                 decord_dir =  Path(__file__).parent.parent / 'decord' / 'python'
                 run_in_venv(venv_path, ['pip', 'install', 'numpy']) 
@@ -168,12 +167,14 @@ def create_venv(venv_path, python='python3.12', requirements=None, compile_decor
         return False
 
 
-def run_in_venv(venv_path, command, work_dir=None):
+def run_in_venv(venv_path, command, work_dir=None, extra_env=None):
     """Run a command inside the specified virtual environment."""
     if work_dir is None:
         work_dir = os.getcwd()
-    
+
     env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
 
     if _use_conda():
         conda_prefix = os.path.abspath(venv_path)
