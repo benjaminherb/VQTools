@@ -13,6 +13,10 @@ def check_maxvqa(rebuild=False):
     repo = Path(__file__).parent / "maxvqa"
     if rebuild or not repo.exists():
         print_separator("BUILDING MAXVQA", newline=True)
+
+        if repo.exists() and rebuild:
+            subprocess.run(['rm', '-rf', str(repo)], check=True)
+
         print_line("Cloning MaxVQA repository...", force=True)
         try:
             subprocess.run(['git', 'clone', 'https://github.com/VQAssessment/ExplainableVQA.git', str(repo)], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
