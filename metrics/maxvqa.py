@@ -24,7 +24,7 @@ def check_maxvqa(rebuild=False):
             modify_file(str(repo / 'demo_maxvqa.py'), [
                 {'action': 'replace', 'pattern': '"cuda"', 'content': '"cpu"'},
                 {'action': 'replace', 'pattern': ".cuda()", 'content': '.to(device)'},
-                {'action': 'replace', 'pattern': 'fast_vqa_encoder.load_state_dict(torch.load("../DOVER/pretrained_weights/DOVER.pth"),strict=False)', 'content': 'fast_vqa_encoder.load_state_dict(torch.load("../DOVER/pretrained_weights/DOVER.pth", map_location=torch.device(device)),strict=False)'},
+                {'action': 'replace', 'pattern': 'fast_vqa_encoder.load_state_dict(torch.load("../dover/pretrained_weights/DOVER.pth"),strict=False)', 'content': 'fast_vqa_encoder.load_state_dict(torch.load("../DOVER/pretrained_weights/DOVER.pth", map_location=torch.device(device)),strict=False)'},
                 {'action': 'replace', 'pattern': 'state_dict = torch.load("maxvqa_maxwell.pt")', 'content': 'state_dict = torch.load("maxvqa_maxwell.pt", map_location=torch.device(device))'},
                 {'action': 'delete', 'from': 158, 'to': -1},
                 {'action': 'replace', 'pattern': 'import gradio as gr', 'content': '# import gradio as gr'},
