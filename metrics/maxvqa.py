@@ -49,8 +49,6 @@ def check_maxvqa(rebuild=False):
                 {'action': 'replace', 'pattern': 'n_prompts.cuda()', 'content': 'n_prompts.cpu()'},
                 {'action': 'replace', 'pattern': 'self.device = "cuda"', 'content': 'self.device = "cpu"'},
                 {'action': 'replace', 'pattern': '.cuda()', 'content': '.cpu()'},
-                {'action': 'replace', 'pattern': 'x = x.permute(1, 0, 2)  # NLD -> LND', 'content': '# x = x.permute(1, 0, 2) # NLD -> LND'},
-                {'action': 'replace', 'pattern': 'x = x.permute(1, 0, 2)  # LND -> NLD', 'content': '# x = x.permute(1, 0, 2) # LND -> NLD'},
             ])
 
         except subprocess.CalledProcessError as e:
