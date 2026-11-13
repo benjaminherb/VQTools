@@ -115,7 +115,11 @@ def parse_vmaf_results(output_file, distorted=None, reference=None, mode='vmaf')
         psnr_hvs_score = pooled_metrics.get('psnr_hvs', {}).get('mean', 0)
         ssim_score = pooled_metrics.get('float_ssim', {}).get('mean', 0)
         ms_ssim_score = pooled_metrics.get('float_ms_ssim', {}).get('mean', 0)
-        
+        if ms_ssim_score is None:
+            # libvmaf writes NaN as null: MS-SSIM is NaN for severely broken frames (negative contrast-structure term) -> count as 0
+            frame_values = [frame.get('metrics', {}).get('float_ms_ssim') for frame in data.get('frames', [])]
+            ms_ssim_score = sum(v if v is not None else 0.0 for v in frame_values) / max(1, len(frame_values))
+
         return {
             'timestamp': ts(),
             'distorted': os.path.basename(distorted),

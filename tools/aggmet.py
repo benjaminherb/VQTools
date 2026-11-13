@@ -17,7 +17,9 @@ metric_configs = {
             ('psnr-hvs', lambda x: np.mean([fs['metrics']['psnr_hvs'] if fs['metrics']['psnr_hvs'] is not None else 60.0 for fs in x['frames']])),
             # psnr-hvs is null if one frame is a perfect match (eg two black frames)
             ('ssim', lambda x: x['pooled_metrics']['float_ssim']['mean']),
-            ('ms-ssim', lambda x: x['pooled_metrics']['float_ms_ssim']['mean']),
+            ('ms-ssim', lambda x: x['pooled_metrics']['float_ms_ssim']['mean'] if x['pooled_metrics']['float_ms_ssim']['mean'] is not None
+                                  else np.mean([fs['metrics']['float_ms_ssim'] if fs['metrics']['float_ms_ssim'] is not None else 0.0 for fs in x['frames']])),
+            # ms-ssim is NaN (null) for frames with negative contrast-structure terms (severely broken frames) -> count as 0
             ('vmaf', lambda x: x['pooled_metrics']['vmaf']['mean']),
             ('vmaf4k', lambda x: x['pooled_metrics']['vmaf_4k']['mean']),
             ('vmaf4k', lambda x: x['pooled_metrics']['vmaf4k']['mean']),
