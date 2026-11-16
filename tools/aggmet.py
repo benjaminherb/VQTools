@@ -66,6 +66,7 @@ metric_configs = {
     'fsim': [('fsim', lambda x: x['mean_score'])],
     'ahiq': [('ahiq', lambda x: x['mean_score'])],
     'pieapp': [('pieapp', lambda x: x['mean_score'])],
+    'haarpsi': [('haarpsi', lambda x: x['mean_score'])],
     'lpips': [('lpips', lambda x: x["metadata"]['mean_distance']),
               ('lpips', lambda x: x["mean_distance"]),
               ('lpips-alex', lambda x: x["lpips-alex"]),

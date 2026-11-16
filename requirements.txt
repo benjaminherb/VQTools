@@ -7,5 +7,6 @@ lpips
 Pillow
 tensorflow
 pyiqa
+piq
 scikit-video
 setuptools<81
