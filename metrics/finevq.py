@@ -29,7 +29,7 @@ def check_finevq(rebuild=False):
 
             venv = str(VENV_PATH)
             run_in_venv(venv, ['pip', 'install', 'torch==2.1.2', 'torchvision==0.16.2', 'numpy<2', 'importlib_metadata'])
-            run_in_venv(venv, ['pip', 'install', '-r', str(REPO_PATH / 'requirements.txt')])
+            run_in_venv(venv, ['pip', 'install', '-r', str(REPO_PATH / 'requirements.txt'), 'pytorchvideo', 'peft==0.10.0'])
             # torch 2.1 needs pkg_resources, which newer setuptools no longer ship
             run_in_venv(venv, ['pip', 'install', 'setuptools<70'])
             run_in_venv(venv, ['pip', 'install', FLASH_ATTN_WHEEL])
