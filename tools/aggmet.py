@@ -89,6 +89,7 @@ metric_configs = {
               ('musiq', lambda x: x['mean_score'])],
     'clipiqa': [('clipiqa', lambda x: x['mean_score'])],
     'clipiqa+': [('clipiqa+', lambda x: x['mean_score'])],
+    'maniqa': [('maniqa', lambda x: x['mean_score'])],
     'vila': [('vila', lambda x: x['mean_vila'])],
     'mdtvsfa': [('mdtvsfa', lambda x: x['score'])],
     'uvq': [('uvq', lambda x: x['uvq']),

@@ -17,7 +17,7 @@ MODES = {
     'uvq': ['uvq', 'uvq1p5'],
     'maxvqa': ['maxvqa'],
     'mdtvsfa': ['mdtvsfa'],
-    'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd', 'ahiq', 'pieapp'],
+    'pyiqa': ['musiq', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'dists', 'fsim', 'nlpd', 'ahiq', 'pieapp', 'maniqa'],
     'piq': ['haarpsi'],
     'pieapp': [],
     'jpegxl': ['ssimulacra2', 'butteraugli'],
@@ -29,7 +29,7 @@ MODES = {
 }
 
 FR_MODES = ['check', 'vmaf4k', 'vmaf', 'vmaf4k-full', 'vmaf-full', 'vmaf4k-v1', 'vmaf-v1', 'psnr', 'cvqa-fr', 'cvqa-fr-ms', 'cvqa-hdr-fr', 'lpips-alex', 'lpips-vgg', 'dists', 'ssimulacra2', 'butteraugli', 'cvvdp-fhd', 'cvvdp-4k', 'fsim', 'nlpd', 'pieapp', 'haarpsi']
-NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-hdr-nr', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'mdtvsfa', 'finevq', 'campvqa', 'campvqa-finevd']
+NR_MODES = ['cvqa-nr', 'cvqa-nr-ms', 'cvqa-hdr-nr', 'dover', 'cover', 'uvq', 'maxvqa', 'musiq', 'qalign', 'fastvqa', 'fastervqa', 'brisque', 'niqe', 'clipiqa', 'clipiqa+', 'maniqa', 'mdtvsfa', 'finevq', 'campvqa', 'campvqa-finevd']
 AVAILABLE_MODES = [mode for sublist in MODES.values() for mode in sublist]
 AVAILABLE_MODES.sort()
 
