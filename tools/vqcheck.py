@@ -118,7 +118,7 @@ def check_model_availability(mode, rebuild=False):
     return True
 
 
-def compare_video_properties(reference, distorted):
+def compare_video_properties(reference, distorted, ignore_framecount=False):
     ref_info = get_video_info(reference)
     dist_info = get_video_info(distorted)
     
@@ -142,7 +142,7 @@ def compare_video_properties(reference, distorted):
         messages.append(("ERROR", "Resolution mismatch"))
     
     if ref_info['frame_count'] != dist_info['frame_count']:
-        messages.append(("ERROR", "Frame count mismatch"))
+        messages.append(("WARNING" if ignore_framecount else "ERROR", "Frame count mismatch"))
 
     fps_tolerance = 0.001
     if abs(ref_info['fps'] - dist_info['fps']) > fps_tolerance:
@@ -174,7 +174,7 @@ def compare_video_properties(reference, distorted):
     return True
 
 
-def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None):
+def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None, ignore_framecount=False):
     
     if output_dir is not None:
         output_file = get_output_filename(distorted, mode, output_dir)
@@ -186,7 +186,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
     scale = None
     reference_fps = None # for vmaf
     if mode in FR_MODES and reference is not None:
-        properties_match = compare_video_properties(reference, distorted)
+        properties_match = compare_video_properties(reference, distorted, ignore_framecount)
 
         if mode == 'check':
             return properties_match, None
@@ -223,7 +223,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
         return properties_match, run_cvqahdr(mode, distorted, reference, output_dir)
     elif mode in MODES['lpips']:
         from metrics.lpips import run_lpips
-        return properties_match, run_lpips(mode, distorted, reference, output_dir, scale=scale)
+        return properties_match, run_lpips(mode, distorted, reference, output_dir, scale=scale, ignore_framecount=ignore_framecount)
     elif mode in MODES['dover']:
         from metrics.dover import run_dover
         return properties_match, run_dover(mode, distorted, output_dir)
@@ -254,7 +254,7 @@ def run_analysis(mode, distorted, reference=None, output_dir=None, temp_dir=None
         return properties_match, run_pieapp(mode, distorted, reference, output_dir)
     elif mode in MODES['jpegxl']:
         from metrics.jpegxl import run_jpegxl_metric
-        return properties_match, run_jpegxl_metric(mode, distorted, reference, output_dir, scale=scale)
+        return properties_match, run_jpegxl_metric(mode, distorted, reference, output_dir, scale=scale, ignore_framecount=ignore_framecount)
     elif mode in MODES['fastvqa']:
         from metrics.fastvqa import run_fastvqa
         return properties_match, run_fastvqa(mode, distorted, output_dir)
@@ -350,7 +350,7 @@ def vqcheck(args, mode, temp_dir):
         print_key_value("Distorted", distorted)
         if reference:
             print_key_value("Reference", reference)
-        properties_match, results = run_analysis(mode, distorted, reference, output_dir, temp_dir=temp_dir)
+        properties_match, results = run_analysis(mode, distorted, reference, output_dir, temp_dir=temp_dir, ignore_framecount=args.ignore_framecount)
         if not properties_match and results is None:
             print_line("SKIPPED (property mismatch)", force=True)
         print_separator()
@@ -387,6 +387,7 @@ def main():
     parser.add_argument('-o', '--output', nargs='?', const='.', help='Save output files. Optional: specify directory')
     parser.add_argument('-q', '--quiet', default=False, action='store_true', help='Enable quiet output')
     parser.add_argument('--rebuild', default=False, action='store_true', help='Delete and rebuild the selected model if applicable')
+    parser.add_argument('--ignore-framecount', default=False, action='store_true', help='Treat frame count mismatch as warning (compares the overlapping frames)')
     parser.add_argument('--tempdir', help='Specify temporary directory to use')
     args = parser.parse_args()
 

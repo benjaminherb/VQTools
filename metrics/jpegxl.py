@@ -29,7 +29,7 @@ def check_jpegxl(metric):
     return True
 
 
-def _process_frames(distorted_path, reference_path, metric, scale=None):
+def _process_frames(distorted_path, reference_path, metric, scale=None, ignore_framecount=False):
     try:
         dis_temp_dir = tempfile.TemporaryDirectory()
         ref_temp_dir = tempfile.TemporaryDirectory()
@@ -39,7 +39,7 @@ def _process_frames(distorted_path, reference_path, metric, scale=None):
         print_line(f"Error extracting frames: {e}", force=True)
         return []
 
-    if len(distorted_frames) != len(reference_frames):
+    if len(distorted_frames) != len(reference_frames) and not ignore_framecount:
         print_line(f"Frame count mismatch between distorted and reference videos.", force=True)
         return []
 
@@ -60,7 +60,7 @@ def _process_frames(distorted_path, reference_path, metric, scale=None):
     return frame_scores
 
 
-def run_jpegxl_metric(metric, distorted, reference, output_dir=None, scale=None):
+def run_jpegxl_metric(metric, distorted, reference, output_dir=None, scale=None, ignore_framecount=False):
     """Run JPEG XL metric."""
 
     output_file = None
@@ -76,7 +76,7 @@ def run_jpegxl_metric(metric, distorted, reference, output_dir=None, scale=None)
     print_key_value("Start Time", ts(start_time))
     
     try:
-        frame_scores = _process_frames(distorted, reference, metric, scale=scale)
+        frame_scores = _process_frames(distorted, reference, metric, scale=scale, ignore_framecount=ignore_framecount)
 
         if not frame_scores:
             raise Exception("No frame scores computed.")
