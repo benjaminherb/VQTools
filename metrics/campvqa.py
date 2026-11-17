@@ -18,8 +18,11 @@ MODELS = {
     'campvqa-finevd': ('cross', 'lsvq_train', 'finevd'),
 }
 
+TORCH_REQUIREMENTS = ['torch==2.7.1', 'torchvision==0.22.1']
+TORCH_INDEX_URL = 'https://download.pytorch.org/whl/cu128'
+
 REQUIREMENTS = [
-    'torch==2.6.0', 'torchvision==0.21.0', 'transformers==4.50.3', 'scikit-learn==1.6.1', 'joblib',
+    'torch==2.7.1', 'torchvision==0.22.1', 'transformers==4.50.3', 'scikit-learn==1.6.1', 'joblib',
     'accelerate', 'huggingface-hub', 'safetensors', 'sentencepiece', 'tokenizers', 'timm', 'pytorchvideo',
     'fvcore', 'iopath', 'av', 'opencv-python', 'numpy', 'pandas', 'scipy', 'matplotlib', 'seaborn',
     'ffmpeg', 'ftfy', 'regex', 'tqdm', 'Pillow',

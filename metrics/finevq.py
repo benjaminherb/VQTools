@@ -31,7 +31,7 @@ def check_finevq(rebuild=False):
             create_venv(str(VENV_PATH), python='python3.9', compile_decord=True)
 
             venv = str(VENV_PATH)
-            run_in_venv(venv, ['pip', 'install', 'torch==2.1.2', 'torchvision==0.16.2', 'numpy<2'])
+            run_in_venv(venv, ['pip', 'install', 'torch==2.1.2', 'torchvision==0.16.2', 'numpy<2', 'importlib_metadata'])
             run_in_venv(venv, ['pip', 'install', '-r', str(REPO_PATH / 'requirements.txt')])
             # torch 2.1 needs pkg_resources, which newer setuptools no longer ship
             run_in_venv(venv, ['pip', 'install', 'setuptools<70'])
