@@ -221,12 +221,10 @@ def main():
     
     errors = {
         'failed_load': [],
-        'failed_extract': {
-            metric_key: {output_key: [] for output_key, _ in config}
-            for metric_key, config in metric_configs.items()
-        },
+        'failed_extract': defaultdict(set),  # output_key -> entries where it could not be extracted
     }
-    
+    meta_keys = set()
+
     for base_name, metrics in tqdm(metric_files.items(), desc="Parsing Metrics", unit="video"):
         if base_name not in consolidated_data:
             consolidated_data[base_name] = {
@@ -235,6 +233,7 @@ def main():
 
         for meta_path in sorted(metrics.get('meta', [])):
             metadata = load_json_if_exists(meta_path)
+            meta_keys.update(metadata)
             for key, value in metadata.items():
                 if key not in args.exclude_keys:
                     consolidated_data[base_name][key] = value
@@ -268,7 +267,7 @@ def main():
             # only report a failure if no file of this metric type provided the key
             for output_key, _ in config:
                 if output_key not in extracted_keys:
-                    errors['failed_extract'][metric_key][output_key].append(', '.join(paths))
+                    errors['failed_extract'][output_key].add(base_name)
 
     
     output_list = list(consolidated_data.values())
@@ -279,10 +278,12 @@ def main():
     metric_coverage = defaultdict(int)
     
     for entry in output_list:
-        for key in entry.keys():
-            if key not in ['name']:  # Skip non-metric keys
-                all_metric_keys.add(key)
-                metric_coverage[key] += 1
+        keys = [k for k in entry if k != 'name' and k not in meta_keys]
+        if any(k in meta_keys for k in entry):
+            keys.append('meta')  # report meta as a single item, not per subkey
+        for key in keys:
+            all_metric_keys.add(key)
+            metric_coverage[key] += 1
     
     total_entries = len(output_list)
     fully_covered_metrics = [k for k, v in metric_coverage.items() if v == total_entries]
@@ -314,11 +315,9 @@ def main():
             print(f"   • Missing metrics: {', '.join(sorted(missing_metrics))}")
         print()
 
-    failed_output_keys = []
-    for metric_key, output_dict in errors['failed_extract'].items():
-        for output_key, file_list in output_dict.items():
-            if file_list and output_key not in fully_covered_metrics:
-                failed_output_keys.append(f"{output_key} ({len(file_list)})")
+    # keys never extracted for any entry are optional/alternative keys of this dataset -> not an error
+    failed_output_keys = [f"{k} ({len(names)})" for k, names in errors['failed_extract'].items()
+                          if 0 < metric_coverage[k] < total_entries]
 
 
     if errors['failed_load'] or failed_output_keys:
