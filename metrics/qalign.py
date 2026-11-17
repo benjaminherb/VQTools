@@ -3,7 +3,8 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, print_separator, create_venv, run_in_venv, modify_file, is_quiet
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, print_separator, create_venv, run_in_venv, modify_file, is_quiet, \
+    ModelWorker, WorkerError, get_worker, WORKERS_PATH
 
 def check_qalign(rebuild=False):
     """Check if QALIGN is available."""
@@ -59,26 +60,37 @@ def run_qalign(mode, distorted, output_dir=None):
             return None
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
+    repo_path = Path(__file__).parent / "qalign"
+    venv_path = repo_path / "venv"
+    device = str(get_device())
+    if device == 'mps':
+        device = 'cpu'  # MPS not supported, fallback to CPU
+
+    try:
+        # the model is loaded once and reused for all videos of this vqcheck run
+        worker = get_worker(('qalign', device), lambda: ModelWorker(
+            'Q-Align', venv_path, WORKERS_PATH / 'qalign_worker.py',
+            [device, 'q-future/one-align'], work_dir=repo_path))
+    except WorkerError as e:
+        print_line(f"ERROR: QALIGN failed to load! {e}", force=True)
+        return None
+
     start_time = datetime.now()
 
     print_line("\nRESULTS")
     print_key_value("Start Time", ts(start_time))
-    repo_path = Path(__file__).parent / "qalign"
-    venv_path = repo_path / "venv"
-    device = get_device()
-    if str(device)== 'mps':
-        device = 'cpu'  # MPS not supported, fallback to CPU
-    result = run_in_venv(str(venv_path), ['python', 'q_align/evaluate/scorer.py', '--device', str(device), '--img_path', os.path.abspath(distorted), '--video', '--model-path', 'q-future/one-align'], work_dir=str(repo_path))
+
+    try:
+        output = worker.request(video=os.path.abspath(distorted))
+    except WorkerError as e:
+        print_line(f"ERROR: QALIGN failed to run! {e}", force=True)
+        return None
 
     results = {
         "timestamp": ts(),
         "distorted": os.path.basename(distorted),
+        "score": output['score'],
     }
-    if result.returncode != 0:
-        print_line(f"ERROR: QALIGN failed to run! {result.stderr}", force=True)
-        return
-
-    results.update(_parse_qalign_output(result.stdout))
 
     end_time = datetime.now()
     analysis_duration = end_time - start_time
@@ -93,17 +105,4 @@ def run_qalign(mode, distorted, output_dir=None):
     if output_file is not None:
         save_json(results, output_file)
 
-    return results
-
-def _parse_qalign_output(stdout):
-    """Parse the output of the QALIGN model."""
-    lines = stdout.strip().split("\n")
-    results = {}
-    for line in lines:
-        if line.startswith('[') and line.endswith(']'):
-            try:
-                value = float(line.strip('[]'))
-                results['score'] = value
-            except ValueError:
-                continue
     return results

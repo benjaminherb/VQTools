@@ -5,6 +5,9 @@ import subprocess
 from datetime import datetime
 import sys
 import shutil
+import atexit
+import threading
+from collections import deque
 import cv2
 import torch
 from tqdm import tqdm
@@ -167,11 +170,8 @@ def create_venv(venv_path, python='python3.12', requirements=None, compile_decor
         return False
 
 
-def run_in_venv(venv_path, command, work_dir=None, extra_env=None):
-    """Run a command inside the specified virtual environment."""
-    if work_dir is None:
-        work_dir = os.getcwd()
-
+def _venv_env(venv_path, extra_env=None):
+    """Environment variables for running a command inside the specified virtual environment."""
     env = os.environ.copy()
     if extra_env:
         env.update(extra_env)
@@ -183,6 +183,15 @@ def run_in_venv(venv_path, command, work_dir=None, extra_env=None):
     else:
         env['VIRTUAL_ENV'] = venv_path
         env['PATH'] = f"{os.path.join(venv_path, 'bin')}:{env.get('PATH', '')}"
+    return env
+
+
+def run_in_venv(venv_path, command, work_dir=None, extra_env=None):
+    """Run a command inside the specified virtual environment."""
+    if work_dir is None:
+        work_dir = os.getcwd()
+
+    env = _venv_env(venv_path, extra_env)
 
     try:
         # route pip through uv with fall back to pip if uv fails
@@ -200,6 +209,76 @@ def run_in_venv(venv_path, command, work_dir=None, extra_env=None):
     except Exception as e:
         print_line(f"ERROR: Failed to run command in venv: {e}", force=True)
         return None
+
+
+## ------ Persistent Model Workers ------ ##
+
+WORKERS_PATH = Path(__file__).parent / 'workers'
+_workers = {}
+
+
+class WorkerError(Exception):
+    pass
+
+
+class ModelWorker:
+    """Runs a script from metrics/workers inside a model venv. The script loads the model once and then
+    scores one video per request (JSON lines over stdin/stdout, see workers/_vq_protocol.py)."""
+
+    def __init__(self, name, venv_path, script, args=(), work_dir=None, extra_env=None):
+        print_line(f"Loading {name} model...")
+        start_time = datetime.now()
+        self.name = name
+        self.stderr = deque(maxlen=50)  # last lines of model output, shown on errors
+        self.process = subprocess.Popen(
+            ['python', str(script)] + [str(a) for a in args], text=True, cwd=str(work_dir or os.getcwd()),
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_venv_env(str(venv_path), extra_env))
+        threading.Thread(target=self.stderr.extend, args=(self.process.stderr,), daemon=True).start()
+        self._receive()  # {"ready": true} once the model is loaded
+        print_key_value("Model Load", f"{(datetime.now() - start_time).total_seconds():.2f}s")
+
+    def request(self, **payload):
+        """Send one request (e.g. video=path) and return the worker's result dict."""
+        try:
+            self.process.stdin.write(json.dumps(payload) + '\n')
+            self.process.stdin.flush()
+        except OSError:
+            pass  # worker is gone, _receive() reports it
+        reply = self._receive()
+        if 'error' in reply:
+            raise WorkerError(reply['error'])
+        return reply['result']
+
+    def close(self):
+        try:
+            self.process.stdin.close()  # the worker exits when its stdin is closed
+            self.process.wait(timeout=30)
+        except (OSError, subprocess.TimeoutExpired):
+            self.process.kill()
+
+    def _receive(self):
+        line = self.process.stdout.readline()
+        if not line:
+            self.process.wait()
+            raise WorkerError(f"{self.name} worker exited unexpectedly:\n{''.join(self.stderr)}")
+        return json.loads(line)
+
+
+def get_worker(key, factory):
+    """Return the running worker for key; start it with factory() on first use or after a crash."""
+    worker = _workers.get(key)
+    if worker is None or worker.process.poll() is not None:
+        worker = _workers[key] = factory()
+    return worker
+
+
+def release_models():
+    """Shut down all model workers (frees their memory), e.g. before the next mode is run."""
+    while _workers:
+        _workers.popitem()[1].close()
+
+
+atexit.register(release_models)
 
 
 ## ------ Docker ------ ##

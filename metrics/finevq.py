@@ -1,13 +1,10 @@
-import csv
-import json
 import os
-import socket
 import subprocess
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, print_separator, create_venv, run_in_venv, is_quiet
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, print_separator, create_venv, run_in_venv, is_quiet, \
+    ModelWorker, WorkerError, get_worker, WORKERS_PATH
 
 REPO_PATH = Path(__file__).parent / "finevq"
 VENV_PATH = REPO_PATH / "venv"
@@ -48,12 +45,6 @@ def check_finevq(rebuild=False):
     return True
 
 
-def _free_port():
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-        s.bind(('', 0))
-        return s.getsockname()[1]
-
-
 def run_finevq(mode, distorted, output_dir=None):
 
     output_file = None
@@ -64,99 +55,37 @@ def run_finevq(mode, distorted, output_dir=None):
             return None
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
+    # FineVQ hard-codes model.cuda() and flash-attn, so it cannot run on CPU/MPS.
+    if str(get_device()) != 'cuda':
+        print_line("ERROR: FineVQ requires a CUDA GPU - SKIPPING!", force=True)
+        return None
+
+    try:
+        # the model is loaded once and reused for all videos of this vqcheck run
+        worker = get_worker(('finevq',), lambda: ModelWorker(
+            'FineVQ', VENV_PATH, WORKERS_PATH / 'finevq_worker.py', [WEIGHTS_PATH], work_dir=REPO_PATH,
+            extra_env={'PYTHONPATH': f"{REPO_PATH}:{os.environ.get('PYTHONPATH', '')}", 'TF_CPP_MIN_LOG_LEVEL': '3'}))
+    except WorkerError as e:
+        print_line(f"ERROR: FineVQ failed to load! {e}", force=True)
+        return None
+
     start_time = datetime.now()
 
     print_line("\nRESULTS")
     print_key_value("Start Time", ts(start_time))
 
-    # FineVQ hard-codes model.cuda(), NCCL and flash-attn, so it cannot run on CPU/MPS.
-    if str(get_device()) != 'cuda':
-        print_line("ERROR: FineVQ requires a CUDA GPU - SKIPPING!", force=True)
-        return None
-
     distorted = os.path.abspath(distorted)
-    with tempfile.TemporaryDirectory(prefix='finevq_') as tmp:
-        tmp = Path(tmp)
-        video_list = tmp / 'videos.txt'
-        video_list.write_text(os.path.basename(distorted) + '\n')
-        meta_path = tmp / 'meta.json'
-        meta_path.write_text(json.dumps({
-            "vqtools": {
-                "root": os.path.dirname(distorted),
-                "video_name_txt": str(video_list),
-                "data_augment": False,
-                "repeat_time": 1,
-                "length": 1,
-            }
-        }))
-        csv_path = tmp / 'results.csv'
-
-        # Same arguments as shell/infer.sh, with our own paths.
-        command = [
-            'torchrun', '--nnodes=1', '--node_rank=0', '--master_addr=127.0.0.1',
-            '--nproc_per_node=1', f'--master_port={_free_port()}',
-            'internvl/train/inference.py',
-            '--model_name_or_path', str(WEIGHTS_PATH),
-            '--conv_style', 'internlm2-chat',
-            '--output_dir', str(tmp / 'work'),
-            '--output_file', str(csv_path),
-            '--metrics_file', str(tmp / 'metrics.txt'),
-            '--meta_path', str(meta_path),
-            '--overwrite_output_dir', 'True',
-            '--force_image_size', '448',
-            '--max_dynamic_patch', '6',
-            '--down_sample_ratio', '0.5',
-            '--drop_path_rate', '0.1',
-            '--freeze_llm', 'True',
-            '--freeze_mlp', 'True',
-            '--freeze_backbone', 'True',
-            '--vision_select_layer', '-1',
-            '--dataloader_num_workers', '4',
-            '--bf16', 'True',
-            '--num_train_epochs', '100',
-            '--per_device_train_batch_size', '1',
-            '--gradient_accumulation_steps', '1',
-            '--evaluation_strategy', 'no',
-            '--save_strategy', 'steps',
-            '--save_steps', '4800',
-            '--save_total_limit', '1',
-            '--learning_rate', '4e-5',
-            '--weight_decay', '0.01',
-            '--warmup_ratio', '0.03',
-            '--lr_scheduler_type', 'cosine',
-            '--logging_steps', '1',
-            '--max_seq_length', '4096',
-            '--do_train', 'True',
-            '--grad_checkpoint', 'True',
-            '--group_by_length', 'True',
-            '--dynamic_image_size', 'True',
-            '--use_thumbnail', 'True',
-            '--ps_version', 'v2',
-            '--deepspeed', 'zero_stage1_config.json',
-            '--report_to', 'none',
-        ]
-        extra_env = {
-            'PYTHONPATH': f"{REPO_PATH}:{os.environ.get('PYTHONPATH', '')}",
-            'LAUNCHER': 'pytorch',
-            'TF_CPP_MIN_LOG_LEVEL': '3',
-        }
-        result = run_in_venv(str(VENV_PATH), command, work_dir=str(REPO_PATH), extra_env=extra_env)
-
-        if result is None or result.returncode != 0:
-            stderr = result.stderr if result is not None else ''
-            print_line(f"ERROR: FineVQ failed to run! {stderr}", force=True)
-            return None
-
-        score = _parse_finevq_csv(csv_path)
-        if score is None:
-            score = _parse_finevq_stdout(result.stdout)
+    try:
+        score = worker.request(video=distorted)['score']
+    except WorkerError as e:
+        print_line(f"ERROR: FineVQ failed to run! {e}", force=True)
+        return None
 
     results = {
         "timestamp": ts(),
         "distorted": os.path.basename(distorted),
+        "score": score,
     }
-    if score is not None:
-        results["score"] = score
 
     end_time = datetime.now()
     analysis_duration = end_time - start_time
@@ -172,25 +101,3 @@ def run_finevq(mode, distorted, output_dir=None):
         save_json(results, output_file)
 
     return results
-
-
-def _parse_finevq_csv(csv_path):
-    """Read the score from the CSV written by internvl/train/inference.py."""
-    try:
-        with open(csv_path, newline='') as f:
-            for row in csv.DictReader(f):
-                return float(row['pred_score'])
-    except (OSError, KeyError, ValueError):
-        pass
-    return None
-
-
-def _parse_finevq_stdout(stdout):
-    """Fallback: the script prints 'pred_score <value>' for each video."""
-    for line in stdout.splitlines():
-        if line.startswith('pred_score'):
-            try:
-                return float(line.split()[-1])
-            except ValueError:
-                continue
-    return None

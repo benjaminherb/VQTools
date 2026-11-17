@@ -9,6 +9,17 @@ from statistics import mean
 from metrics.utils import get_output_filename, save_json, print_key_value, ts, get_device, print_line, get_video_info, \
     is_quiet
 
+_metric_cache = {}  # (mode, device) -> metric, reused for all videos of the current mode
+
+
+def _get_metric(mode, device):
+    import pyiqa
+    key = (mode, str(device))
+    if key not in _metric_cache:
+        _metric_cache.clear()  # only keep the current mode's model in memory
+        with contextlib.redirect_stdout(None): # supress model loading messages
+            _metric_cache[key] = pyiqa.create_metric(mode, as_loss=False, device=device)
+    return _metric_cache[key]
 
 
 def check_pyiqa(mode):
@@ -88,7 +99,6 @@ def _process_frames_streaming(video_path, reference_path, metric, device, stride
 
 def run_pyiqa(mode, distorted, reference, output_dir=None, scale=None):
     """Run PyIQA video quality assessment."""
-    import pyiqa
 
     output_file = None
     if output_dir is not None:
@@ -112,8 +122,7 @@ def run_pyiqa(mode, distorted, reference, output_dir=None, scale=None):
         fps = get_video_info(distorted).get('fps', 60)
         stride = max(1, int(fps/2))
 
-        with contextlib.redirect_stdout(None): # supress model loading messages
-            metric = pyiqa.create_metric(mode, as_loss=False, device=device)
+        metric = _get_metric(mode, device)
         result = _process_frames_streaming(distorted, reference, metric, device, stride=stride, scale=scale)
 
         frame_scores = list(result.values())

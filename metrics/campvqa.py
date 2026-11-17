@@ -1,12 +1,12 @@
 import os
-import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
 
 import torch
 
-from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, print_separator, modify_file, create_venv, run_in_venv, is_quiet
+from metrics.utils import get_output_filename, save_json, print_key_value, ts, print_line, print_separator, modify_file, create_venv, run_in_venv, is_quiet, \
+    ModelWorker, WorkerError, get_worker, WORKERS_PATH
 
 REPO_URL = 'https://github.com/xinyiW915/CAMP-VQA.git'
 CLIP_URL = 'git+https://github.com/openai/CLIP.git@dcba3cb2e2827b402d2701e7e1c7d9fed8a20ef1'
@@ -84,36 +84,33 @@ def run_campvqa(mode, distorted, output_dir=None):
             return None
         os.makedirs(os.path.dirname(output_file), exist_ok=True)
 
+    repo = Path(__file__).parent / "campvqa"
+    intra_cross, train_data, test_data = MODELS[mode]
+    device = 'gpu' if torch.cuda.is_available() else 'cpu'  # CAMP-VQA only supports cuda or cpu
+
+    # same flags as src/camp-vqa_demo.py; the worker loads the models once and reuses them for all videos
+    args = [
+        '--device', device,
+        '--intra_cross_experiment', intra_cross,
+        '--train_data_name', train_data,
+        '--test_data_name', test_data,
+        '--save_model_path', str(repo / 'model'),
+        '--prompt_path', str(repo / 'src' / 'config' / 'prompts.json'),
+        '--num_workers', '0',
+    ]
+    try:
+        worker = get_worker(('campvqa', mode), lambda: ModelWorker(
+            'CAMP-VQA', repo / 'venv', WORKERS_PATH / 'campvqa_worker.py', args, work_dir=repo / 'src'))
+    except WorkerError as e:
+        print_line(f"ERROR: CAMP-VQA failed to load: {e}", force=True)
+        return None
+
     start_time = datetime.now()
     print_line("\nRESULTS")
     print_key_value("Start Time", ts(start_time))
 
     try:
-        repo = Path(__file__).parent / "campvqa"
-        intra_cross, train_data, test_data = MODELS[mode]
-        device = 'gpu' if torch.cuda.is_available() else 'cpu'  # CAMP-VQA only supports cuda or cpu
-
-        cmd = [
-            'python', str(repo / 'src' / 'camp-vqa_demo.py'),
-            '--device', device,
-            '--intra_cross_experiment', intra_cross,
-            '--train_data_name', train_data,
-            '--test_data_name', test_data,
-            '--test_video_path', os.path.abspath(distorted),
-            '--save_model_path', str(repo / 'model'),
-            '--prompt_path', str(repo / 'src' / 'config' / 'prompts.json'),
-            '--num_workers', '0',
-        ]
-        result = run_in_venv(str(repo / 'venv'), cmd, work_dir=str(repo / 'src'))
-
-        if result.returncode != 0:
-            print_line(f"ERROR: CAMP-VQA evaluation failed: {result.stderr}", force=True)
-            return None
-
-        score = _parse_campvqa_results(result.stdout)
-        if score is None:
-            print_line(f"ERROR: Could not parse CAMP-VQA output: {result.stdout}", force=True)
-            return None
+        score = worker.request(video=os.path.abspath(distorted))['score']
 
         results = {
             'timestamp': ts(),
@@ -140,11 +137,3 @@ def run_campvqa(mode, distorted, output_dir=None):
     except Exception as e:
         print_line(f"ERROR: CAMP-VQA evaluation failed: {e}", force=True)
         return None
-
-
-def _parse_campvqa_results(stdout):
-    """Parse the quality score from camp-vqa_demo.py output."""
-    match = re.search(r'Predicted Quality Score:\s*(-?[0-9.]+(?:[eE][-+]?[0-9]+)?)', stdout)
-    if match:
-        return float(match.group(1))
-    return None

@@ -1,7 +1,7 @@
 import os
 import argparse
 import shutil
-from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet, print_line, get_output_filename, is_quiet 
+from metrics.utils import get_video_files, find_reference_file, format_duration, format_file_size, print_separator, print_key_value, get_video_info, set_quiet, print_line, get_output_filename, is_quiet, release_models
 import tempfile
 from tqdm import tqdm
 
@@ -368,7 +368,9 @@ def vqcheck(args, mode, temp_dir):
             else:
                 if results.get('psnr', 0) >= 60: # == inf for VMAF tool
                     perfect_match += 1
-    
+
+    release_models()  # free this mode's model workers before the next mode
+
     if total_files > 1:
         print_separator("SUMMARY", newline=True)
         print_key_value("Files Processed", str(total_files))
